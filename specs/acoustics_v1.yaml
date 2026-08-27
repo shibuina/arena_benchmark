@@ -1,0 +1,73 @@
+# Level C geometry on the acoustics corridor worlds.
+#
+# Why these worlds: 24 of them, all bend / bend45 / cross / cross6 / cross8 / tee crossed with
+# plain / narrow / wide / mixed. Corridor topology is what Level C is *about* — where and at
+# what angle a pedestrian meets the robot — and unlike the generated office worlds these
+# specify every position as a literal coordinate, which is the shape proven to boot under
+# Gazebo (see dataset_generation.md §2.2).
+#
+# Level D is deliberately absent: every agent here is `agent_type: adult`, which is
+# `mode: simple`, so behavioural knobs are structurally inert and a knob cell would only
+# produce "not behaviour-tree driven" aborts. This spec is geometry only, by construction.
+#
+# One arm to start. A learned arm needs a baseline on the same chassis, and nav2 *is* that
+# baseline, so a single-arm spec is valid and cheap; add planners once the arm boots.
+version: 1
+name: acoustics_v1
+
+sim: gazebo
+human: arena
+tm_robots: edge_case
+tm_obstacles: edge_case
+base_mode: scenario
+# NOT `default`. Measured 2026-08-21: in `default`, ped_1 and ped_2 walk along the robot's own
+# corridor line (min|dy| = 0.00) and close to within 0.25 m of its start pose, so
+# RegulatedPurePursuitController correctly refuses to move - 4,349 "collision ahead" errors and
+# a robot frozen for 43 of 45 s. That scenario was authored for acoustics work, not navigation.
+# Scenarios 1-4 place every pedestrian on the other arm of the bend, >=3 m clear of the robot's
+# corridor, which leaves the designed encounter to the injected agent where it belongs. They
+# differ only in pedestrian count, so they also give a clean crowd-density axis later.
+scenario: "1"
+episode_duration: 45
+
+# One per geometry family, all at default width.
+worlds:
+  - acoustics_bend
+  - acoustics_bend45
+  - acoustics_cross
+  - acoustics_tee
+
+arms:
+  - {id: nav2_diff, robot: jackal, mobile: nav2, drive: differential, rate_hz: 10}
+
+seeds: {start: 2000, count: 2}
+
+cells:
+  - id: base
+    note: the scenario's own 5 pedestrians, nothing injected
+    params:
+      task.edge_case.inject: 0
+
+  - id: c_headon
+    note: head-on in the corridor - the encounter a bend makes unavoidable
+    params:
+      task.edge_case.inject: 1
+      task.edge_case.place: intercept
+      task.edge_case.approach_angle: 180.0
+      task.edge_case.encounter_at: 0.5
+
+  - id: c_cross90
+    note: crossing from the robot's right - the encounter a tee or cross makes possible
+    params:
+      task.edge_case.inject: 1
+      task.edge_case.place: intercept
+      task.edge_case.approach_angle: 90.0
+      task.edge_case.encounter_at: 0.5
+
+  - id: c_overtake
+    note: same direction, slower - the encounter a narrow corridor makes a trap
+    params:
+      task.edge_case.inject: 1
+      task.edge_case.place: intercept
+      task.edge_case.approach_angle: 0.0
+      task.edge_case.encounter_at: 0.5

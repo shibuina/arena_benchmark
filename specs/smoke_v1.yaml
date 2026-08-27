@@ -1,0 +1,55 @@
+# M2 verification spec: the smallest thing that exercises every layer end to end.
+#
+# Two worlds x three control cells x two arms x three seeds = 36 episodes. Deliberately all
+# three *control* arms and no tails, because this spec exists to prove the machinery works,
+# not to measure anything: if the base arm and the C-only arm come out identical, the
+# injection is not happening and no amount of tail sweeping would have revealed it.
+# NOTE (2026-08-21): `sim: gazebo`, not `dummy`.
+# `sim:=dummy` launches only a static_transform_publisher (map -> dummy TF) — no physics, no
+# controller, nothing consuming cmd_vel. A robot does not move under it, so every criticality
+# metric would be measured against a stationary robot and no planner arm means anything.
+# Dummy is for structural checks of cases.jsonl, which is what the geometry work used.
+version: 1
+name: smoke_v1
+
+sim: gazebo
+human: arena
+tm_robots: edge_case
+tm_obstacles: edge_case
+base_mode: scenario
+scenario: default
+episode_duration: 60
+
+worlds:
+  - arena_arena_002
+  - arena_classic_002
+
+arms:
+  # Differential family. jackal is the chassis every existing edge_case run used, so its
+  # abort and geometry statistics are the ones already on disk to compare against.
+  - {id: nav2_diff, robot: jackal, mobile: nav2, drive: differential, rate_hz: 10}
+  - {id: cadrl, robot: jackal, mobile: drl, planner: cadrl, drive: differential, rate_hz: 10}
+
+seeds: {start: 1000, count: 3}
+
+cells:
+  - id: base
+    note: scenario alone - does the crowd break the robot without an edge case?
+    params:
+      task.edge_case.inject: 0
+
+  - id: c_only
+    note: a nominal pedestrian on an interception course, no tail
+    params:
+      task.edge_case.inject: 1
+      task.edge_case.place: intercept
+      task.edge_case.approach_angle: 180.0
+      task.edge_case.encounter_at: 0.5
+
+  - id: d_only
+    note: the tail without the geometry - the complementary ablation to c_only
+    knob: step_patience
+    level: 0.99
+    params:
+      task.edge_case.inject: 1
+      task.edge_case.place: scenario

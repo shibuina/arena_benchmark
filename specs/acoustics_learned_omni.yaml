@@ -1,0 +1,45 @@
+# Learning-based planners, omnidirectional family, on the acoustics corridor worlds.
+#
+# Cells are NOT listed here. They are authored inside the scenario files themselves
+# (`worlds/<world>/scenarios/edge_*/scenario.yaml`, key `edge_case:`), so a scenario directory
+# is a complete, self-describing situation: who is in the corridor and what is being done to
+# the robot live in one file. Arena's loader ignores the block; only arena_benchmark reads it.
+#
+# COST OF THAT FORM: `scenario` is launch-invariant, so every case scenario is its own stack.
+# 3 cases x 4 worlds = 12 shards, 12 boots. Spec-authored cells would share a launch per world.
+# That is the trade for self-describing scenarios and it is deliberate.
+#
+# ARMS: nav2 is not optional. Arms are only comparable within a drive family and on the same
+# chassis, so each family carries its own classical control; `parse_spec` refuses a family with
+# a learned planner and no baseline. rlrvo / kdma / navistar / cd-sarl are the omnidirectional
+# learners that declare `sensor_needs: []`.
+version: 1
+name: acoustics_learned_omni
+
+sim: gazebo
+human: arena
+tm_robots: edge_case
+tm_obstacles: edge_case
+base_mode: scenario
+episode_duration: 45
+
+worlds:
+  - acoustics_bend
+  - acoustics_bend45
+  - acoustics_cross
+  - acoustics_tee
+
+# Read the edge_case block out of each of these, per world.
+scenarios:
+  - edge_headon
+  - edge_cross90
+  - edge_overtake
+
+arms:
+  - {id: nav2_omni,  robot: mpo700, mobile: nav2, drive: omnidirectional, rate_hz: 10}
+  - {id: rlrvo,    robot: mpo700, mobile: drl, planner: rlrvo,    drive: omnidirectional, rate_hz: 10}
+  - {id: kdma,     robot: mpo700, mobile: drl, planner: kdma,     drive: omnidirectional, rate_hz: 10}
+  - {id: navistar, robot: mpo700, mobile: drl, planner: navistar, drive: omnidirectional, rate_hz: 10}
+  - {id: cd-sarl,  robot: mpo700, mobile: drl, planner: cd-sarl,  drive: omnidirectional, rate_hz: 10}
+
+seeds: {start: 3000, count: 5}

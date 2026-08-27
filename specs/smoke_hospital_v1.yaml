@@ -1,0 +1,50 @@
+# M0 verification spec: the smallest run that can actually produce a score row.
+#
+# Uses `hospital_2/normal` rather than a generated office world and its `default` scenario,
+# for two measured reasons (2026-08-21):
+#
+#   * The generated office worlds do not start an episode under Gazebo at all. Three runs on
+#     `arena_arena_002` across two mobile adapters and both `auto_reset` settings produced
+#     zero `EPISODE STARTED`; the same plan on `hospital_2` started episodes immediately.
+#   * `hospital_2/default` is a legacy `scenario.json` with no pedestrians, so clearance is
+#     never measurable and every episode ends `observed: false` — "no usable samples; no score
+#     written". `normal` carries 14 agents and is the humansim-converted scenario.
+#
+# Caveat that limits what this spec can test: `normal`'s agents are `agent_type: adult`, which
+# is `mode: simple`. Every Level D knob is structurally inert on them, so a knob cell here is
+# expected to abort with "not behaviour-tree driven" - correctly. This spec therefore carries
+# only the two geometry-free control cells; it exists to prove the measurement path, not to
+# measure anything.
+version: 1
+name: smoke_hospital_v1
+
+sim: gazebo
+human: arena
+tm_robots: edge_case
+tm_obstacles: edge_case
+base_mode: scenario
+scenario: normal
+episode_duration: 60
+
+worlds:
+  - hospital_2
+
+arms:
+  - {id: nav2_diff, robot: jackal, mobile: nav2, drive: differential, rate_hz: 10}
+  - {id: cadrl, robot: jackal, mobile: drl, planner: cadrl, drive: differential, rate_hz: 10}
+
+seeds: {start: 1000, count: 3}
+
+cells:
+  - id: base
+    note: scenario alone - the 14 hospital_2 agents, nothing injected
+    params:
+      task.edge_case.inject: 0
+
+  - id: c_only
+    note: one nominal pedestrian on an interception course, no tail
+    params:
+      task.edge_case.inject: 1
+      task.edge_case.place: intercept
+      task.edge_case.approach_angle: 180.0
+      task.edge_case.encounter_at: 0.5

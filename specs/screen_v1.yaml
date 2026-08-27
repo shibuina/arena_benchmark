@@ -1,0 +1,90 @@
+# Stage 0 screening: one-at-a-time, cheap, and not the dataset.
+#
+# Its only job is to find which cells might separate the arms and which abort, so the
+# confirm run can spend its seeds where they matter. Three seeds detects nothing on a
+# heavy-tailed minimum by design - cells are ranked here and *measured* on a disjoint seed
+# block later, because selecting cells and reporting them on the same rows inflates the
+# effect.
+#
+# 21 cells x 4 worlds x 2 arms x 3 seeds = 504 episodes, in 8 shards of 63. At roughly 85 s
+# per trial that is ~12 h serial, or ~1.5 h across 8 concurrent stacks.
+# Verify before running: `arena_bench expand screen_v1`.
+# NOTE (2026-08-21): `sim: gazebo`, not `dummy`.
+# `sim:=dummy` launches only a static_transform_publisher (map -> dummy TF) — no physics, no
+# controller, nothing consuming cmd_vel. A robot does not move under it, so every criticality
+# metric would be measured against a stationary robot and no planner arm means anything.
+# Dummy is for structural checks of cases.jsonl, which is what the geometry work used.
+version: 1
+name: screen_v1
+
+sim: gazebo
+human: arena
+tm_robots: edge_case
+tm_obstacles: edge_case
+base_mode: scenario
+scenario: default
+episode_duration: 60
+
+# Four of the twelve generated office worlds. All ship the same `default` scenario, so a
+# cell means the same thing in each and the world becomes a clean replication factor.
+worlds:
+  - arena_arena_002
+  - arena_classic_002
+  - arena_gpt_002
+  - rag_floor_arena_012
+
+arms:
+  - {id: nav2_diff, robot: jackal, mobile: nav2, drive: differential, rate_hz: 10}
+  - {id: cadrl, robot: jackal, mobile: drl, planner: cadrl, drive: differential, rate_hz: 10}
+
+seeds: {start: 1000, count: 3}
+
+cells:
+  # --- controls: every result below is read against these -----------------------------
+  - id: base
+    params: {task.edge_case.inject: 0}
+  - id: c_only
+    params:
+      task.edge_case.inject: 1
+      task.edge_case.place: intercept
+      task.edge_case.approach_angle: 180.0
+      task.edge_case.encounter_at: 0.5
+
+  # --- Level C: where and when the encounter happens -----------------------------------
+  - id: c_angle_000
+    params: {task.edge_case.inject: 1, task.edge_case.place: intercept, task.edge_case.approach_angle: 0.0, task.edge_case.encounter_at: 0.5}
+  - id: c_angle_090
+    params: {task.edge_case.inject: 1, task.edge_case.place: intercept, task.edge_case.approach_angle: 90.0, task.edge_case.encounter_at: 0.5}
+  - id: c_angle_270
+    params: {task.edge_case.inject: 1, task.edge_case.place: intercept, task.edge_case.approach_angle: 270.0, task.edge_case.encounter_at: 0.5}
+  - id: c_early
+    params: {task.edge_case.inject: 1, task.edge_case.place: intercept, task.edge_case.approach_angle: 180.0, task.edge_case.encounter_at: 0.35}
+  - id: c_late
+    params: {task.edge_case.inject: 1, task.edge_case.place: intercept, task.edge_case.approach_angle: 180.0, task.edge_case.encounter_at: 0.65}
+  - id: c_coarrival_15
+    params: {task.edge_case.inject: 1, task.edge_case.place: intercept, task.edge_case.approach_angle: 180.0, task.edge_case.encounter_at: 0.5, task.edge_case.co_arrival_offset: 1.5}
+  - id: c_coarrival_30
+    params: {task.edge_case.inject: 1, task.edge_case.place: intercept, task.edge_case.approach_angle: 180.0, task.edge_case.encounter_at: 0.5, task.edge_case.co_arrival_offset: 3.0}
+  - id: c_pair
+    params: {task.edge_case.inject: 2, task.edge_case.place: intercept, task.edge_case.approach_angle: 180.0, task.edge_case.encounter_at: 0.5}
+
+  # --- object timelines: perturbing the world rather than the people --------------------
+  - id: obj_corridor_pinch
+    params: {task.edge_case.inject: 0, task.edge_case.objects: corridor_pinch}
+  - id: obj_doorway_block_clear
+    params: {task.edge_case.inject: 0, task.edge_case.objects: doorway_block_clear}
+  - id: obj_trap_behind
+    params: {task.edge_case.inject: 0, task.edge_case.objects: trap_behind}
+
+# --- Levels A and D: one knob at one level, crossed with the nominal geometry -----------
+# Level D uses only the four knobs the mode's README marks as reaching a subsystem-mode
+# population; the object-bound ones apply cleanly and do nothing, which would read as a
+# null result rather than the known limitation it is.
+grid:
+  knobs:
+    - need_decay
+    - need_initial
+    - interaction_duration
+    - step_patience
+  levels: [0.95, 0.99]
+  catalogue: level_d

@@ -1,0 +1,10 @@
+# Present so pytest anchors its rootdir here rather than walking up to src/Arena, where the
+# workspace pyproject would make `arena_benchmark` resolve to this directory as a namespace
+# package and the real package underneath it unimportable. Same shape as task_generator's.
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra --strict-markers"
+markers = [
+    "ros: requires a sourced ROS2 environment",
+]

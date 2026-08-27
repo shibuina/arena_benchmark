@@ -1,0 +1,79 @@
+# Shipped with arena_benchmark and copied into every generated scenario that has dwelling
+# agents, so behavioural (Level D) knobs have something to act on.
+#
+# Taken verbatim from arena_arena_002/scenarios/default/talker.yaml, which was authored
+# for exactly this and carries no world-specific references: it extends `adult`, uses the
+# symmetric GROUP_CONVERSATION (no `target`, so no world-object resolution), and declares
+# both `duration` and `patience` so `interaction_duration` and `step_patience` are
+# perturbable. The builtin types cannot do any of that - they are all `mode: simple`.
+#
+# A conversational office worker, built to host the Stage D behavioural knobs.
+#
+# Design notes — this type deliberately avoids the traps in the shipped types:
+#
+#   * GROUP_CONVERSATION is symmetric: it takes no `target`, so it does not
+#     depend on world-object resolution, which does not work in subsystem mode
+#     (adapter registers objects under the env-prefixed sim_path, BT steps use
+#     the plain name). Everything here works over the Arena adapter.
+#
+#   * `social.initial` has a real std, so `need_initial` is not degenerate the
+#     way hospital_1/queue's `thirst.initial` (std 0.0) is.
+#
+#   * At NOMINAL decay the conversation always completes before the transition
+#     can fire (30 s duration vs 40 s to reach the threshold), so the baseline
+#     agent simply chats. Raising `need_decay` is what CREATES the abandonment
+#     behaviour rather than merely modulating it — at p99 (2.16/s) the threshold
+#     is reached at 18.5 s, mid-conversation.
+#
+#   * duration stays under patience across the whole tail: p99 duration is
+#     48.6 s against 60 s nominal patience, so `interaction_duration` runs to
+#     completion instead of being cut by the patience watchdog.
+#
+#   * The threshold is reachable over a useful window (social decays 80 -> 0 in
+#     ~80 s at nominal), so `timing: aligned` can solve a fire time onto a real
+#     robot arrival. hospital_1/queue bottoms out at 3.1 s, which makes the
+#     solver almost unusable there.
+
+name: talker
+mode: behavior_tree
+extends: adult
+
+desired_velocity: {mean: 1.1, std: 0.15, clip_low: 0.6, clip_high: 1.6}
+
+needs:
+  social:
+    initial:    {mean: 80.0, std: 12.0, clip_low: 40.0, clip_high: 100.0}
+    decay_rate: {mean:  1.0, std:  0.5, clip_low:  0.2, clip_high:   5.0}
+
+utility_weights:
+  social: 1.0
+
+initial_sequence: chat
+
+sequences:
+  # Hold a standing conversation. Completing it tops `social` back up, so a
+  # nominal agent loops here indefinitely and never takes the transition.
+  chat:
+    steps:
+      hold_conversation:
+        interaction: GROUP_CONVERSATION
+        duration: {mean: 30.0, std:  8.0, clip_low: 10.0, clip_high:  60.0}
+        patience: {mean: 60.0, std: 12.0, clip_low: 30.0, clip_high: 150.0}
+        satisfies: {social: 100.0}
+    then: chat
+    transitions:
+      - when: {social: {below: 40.0}}
+        goto: step_aside
+
+  # Need-driven preemption: break off and stand still. A pure-wait step (no
+  # interaction, duration only) compiles to ClearOutcome -> Hold, which pins the
+  # agent in place — so this is also what makes the agent an obstacle.
+  step_aside:
+    steps:
+      pause:
+        duration: {mean:  8.0, std: 2.0, clip_low:  3.0, clip_high: 20.0}
+        # Declared so `step_patience` has something to perturb here too - that knob
+        # is a paramdist and cannot introduce an absent field.
+        patience: {mean: 30.0, std: 6.0, clip_low: 15.0, clip_high: 90.0}
+        satisfies: {social: 60.0}
+    then: chat
