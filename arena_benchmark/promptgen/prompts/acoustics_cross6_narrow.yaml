@@ -1,0 +1,259 @@
+- id: acoustics_cross6_narrow_001
+  scope: world
+  world: acoustics_cross6_narrow
+  targets: ['A:blackout', 'D:formation_break', 'C:approach']
+  text: The lights go out and everyone slows down, feeling their way. Three colleagues
+    stand in a circle in the arm e; they scatter when the robot comes within a few
+    metres. A visitor walks up to the robot further down the robot's route, stops
+    right in front of it and stares at it for a long time.
+  oracle:
+    A: {case: blackout}
+    D:
+      case: formation_break
+      variant: circle
+      break: scatter
+      members: &id001 [adult, adult, adult]
+      place: {zone: arm_e}
+      when: {robot_within: 4.0}
+    C: {profile: adult, route_fraction: 0.7, case: approach, angle: 180, after: stop_facing,
+      duration: 30}
+- id: acoustics_cross6_narrow_002
+  scope: world
+  world: acoustics_cross6_narrow
+  targets: ['D:interaction_unbroken', 'C:approach']
+  text: Three colleagues stand side by side across the corridor in the arm w, chatting,
+    and do not move aside. An old man walks straight at the robot further down the
+    robot's route and keeps going.
+  oracle:
+    D:
+      case: interaction_unbroken
+      variant: blocking
+      members: *id001
+      place: {zone: arm_w}
+    C: {profile: elder, route_fraction: 0.7, case: approach, angle: 180, after: continue}
+- id: acoustics_cross6_narrow_003
+  scope: world
+  world: acoustics_cross6_narrow
+  targets: ['A:stampede']
+  text: 'A shift change: everyone surges back to their posts, nobody yields, as soon
+    as the robot sets off.'
+  oracle:
+    A: {case: stampede}
+- id: acoustics_cross6_narrow_004
+  scope: world
+  world: acoustics_cross6_narrow
+  targets: ['A:busy', 'B:erratic_route', 'C:blocking']
+  text: The floor is busy today, twice as many people as usual. A few people keep
+    changing their minds about where they are going. A doctor stands still just ahead
+    of the robot, blocking it for a few seconds.
+  oracle:
+    A: {case: busy}
+    B:
+      case: erratic_route
+      select: &id002 {n: 3}
+    C: {profile: doctor, route_fraction: 0.3, case: blocking, mode: stand, duration: 6}
+- id: acoustics_cross6_narrow_005
+  scope: world
+  world: acoustics_cross6_narrow
+  targets: ['A:blackout', 'D:stubborn', 'B:erratic_route', 'C:approach']
+  text: A power cut leaves the whole floor in the dark, after a while. An absent-minded
+    man walks towards the robot halfway along the robot's route, wants to keep going
+    and refuses to give way. A few people keep changing their minds about where they
+    are going, twenty seconds in. A doctor crosses the robot's path from the right,
+    just ahead of the robot.
+  oracle:
+    A: {case: blackout}
+    D: {case: stubborn, profile: distracted, route_fraction: 0.5}
+    B:
+      case: erratic_route
+      select: *id002
+      when: &id010 {at: 20}
+    C: {profile: doctor, route_fraction: 0.3, case: approach, angle: 90, after: continue}
+- id: acoustics_cross6_narrow_006
+  scope: world
+  world: acoustics_cross6_narrow
+  targets: ['A:evacuation']
+  text: The fire alarm goes off and everyone heads for the exit, after a while.
+  oracle:
+    A: {case: evacuation}
+- id: acoustics_cross6_narrow_007
+  scope: world
+  world: acoustics_cross6_narrow
+  targets: ['A:stampede', 'B:intrinsic']
+  text: The break is over and the whole crowd rushes back to work all at once, pushing
+    through, once the robot is halfway. Half the people here are rushing.
+  oracle:
+    A: {case: stampede}
+    B:
+      case: intrinsic
+      select: &id004 {amount: half}
+      params: &id005 {speed: high}
+- id: acoustics_cross6_narrow_008
+  scope: world
+  world: acoustics_cross6_narrow
+  targets: ['B:intrinsic', 'C:approach']
+  text: The elderly people are slow to react and do not get out of the way, once the
+    robot is halfway. An old man walks straight at the robot halfway along the robot's
+    route and keeps going.
+  oracle:
+    B:
+      case: intrinsic
+      select: {profile: elder}
+      params: {reaction: high, repulsion: low}
+      when: &id006 {route_fraction: 0.5}
+    C: {profile: elder, route_fraction: 0.5, case: approach, angle: 180, after: continue}
+- id: acoustics_cross6_narrow_009
+  scope: world
+  world: acoustics_cross6_narrow
+  targets: ['D:interaction_unbroken', 'B:erratic_route', 'C:approach']
+  text: A doctor and two visitors stand side by side across the corridor right in
+    the robot's way, chatting, and do not move aside. A few people keep changing their
+    minds about where they are going, after half a minute. A man in a hurry crosses
+    the robot's path from the right, just ahead of the robot.
+  oracle:
+    D:
+      case: interaction_unbroken
+      variant: blocking
+      members: &id003 [doctor, adult, adult]
+      place: {route_fraction: 0.5}
+    B:
+      case: erratic_route
+      select: *id002
+      when: &id009 {at: 30}
+    C: {profile: hurried, route_fraction: 0.3, case: approach, angle: 90, after: continue}
+- id: acoustics_cross6_narrow_010
+  scope: world
+  world: acoustics_cross6_narrow
+  targets: ['A:evacuation', 'D:interaction_unbroken', 'B:intrinsic', 'C:approach']
+  text: An evacuation is called; everybody makes for the exit, after a while. A doctor
+    and two visitors stand talking right in the robot's way and will not stop. Half
+    the people here are rushing, once the robot is halfway. An absent-minded man walks
+    straight at the robot halfway along the robot's route and keeps going.
+  oracle:
+    A: {case: evacuation}
+    D:
+      case: interaction_unbroken
+      variant: standing
+      members: *id003
+      place: {route_fraction: 0.5}
+    B:
+      case: intrinsic
+      select: *id004
+      params: *id005
+      when: *id006
+    C: {profile: distracted, route_fraction: 0.5, case: approach, angle: 180, after: continue}
+- id: acoustics_cross6_narrow_011
+  scope: world
+  world: acoustics_cross6_narrow
+  targets: ['D:interaction_unbroken', 'C:blocking']
+  text: Four people stand talking right in the robot's way and will not stop. An old
+    man stands still halfway along the robot's route, blocking it for a while.
+  oracle:
+    D:
+      case: interaction_unbroken
+      variant: standing
+      members: [adult, adult, adult, adult]
+      place: {route_fraction: 0.5}
+    C: {profile: elder, route_fraction: 0.5, case: blocking, mode: stand, duration: 12}
+- id: acoustics_cross6_narrow_012
+  scope: world
+  world: acoustics_cross6_narrow
+  targets: ['C:blocking']
+  text: A child stands still halfway along the robot's route, blocking it for a moment.
+  oracle:
+    C: {profile: child, route_fraction: 0.5, case: blocking, mode: stand, duration: 4}
+- id: acoustics_cross6_narrow_013
+  scope: world
+  world: acoustics_cross6_narrow
+  targets: ['A:blackout', 'D:interaction_unbroken', 'B:intrinsic', 'C:blocking']
+  text: A power cut leaves the whole floor in the dark, twenty seconds in. Two nurses
+    stand side by side across the corridor in the arm ne, chatting, and do not move
+    aside. Half of the people here are visually impaired and cannot see the robot
+    until it is close, after a while. A doctor stands still halfway along the robot's
+    route, blocking it for a few seconds.
+  oracle:
+    A: {case: blackout}
+    D:
+      case: interaction_unbroken
+      variant: blocking
+      members: &id007 [nurse, nurse]
+      place: {zone: arm_ne}
+    B:
+      case: intrinsic
+      select: {amount: half}
+      params: {vision_range: low, vision_fov: low}
+      when: &id008 {at: 10}
+    C: {profile: doctor, route_fraction: 0.5, case: blocking, mode: stand, duration: 6}
+- id: acoustics_cross6_narrow_014
+  scope: world
+  world: acoustics_cross6_narrow
+  targets: ['C:blocking']
+  text: A man in a hurry shuffles along slowly halfway along the robot's route, right
+    in front of the robot.
+  oracle:
+    C: {profile: hurried, route_fraction: 0.5, case: blocking, mode: lead}
+- id: acoustics_cross6_narrow_015
+  scope: world
+  world: acoustics_cross6_narrow
+  targets: ['D:interaction_unbroken']
+  text: Two nurses stand talking in the junction and will not stop.
+  oracle:
+    D:
+      case: interaction_unbroken
+      variant: standing
+      members: *id007
+      place: {zone: junction}
+- id: acoustics_cross6_narrow_016
+  scope: world
+  world: acoustics_cross6_narrow
+  targets: ['B:erratic_route']
+  text: A few people keep changing their minds about where they are going, after a
+    while.
+  oracle:
+    B:
+      case: erratic_route
+      select: *id002
+      when: *id008
+- id: acoustics_cross6_narrow_017
+  scope: world
+  world: acoustics_cross6_narrow
+  targets: ['B:intrinsic']
+  text: Half the people here are rushing, after half a minute.
+  oracle:
+    B:
+      case: intrinsic
+      select: *id004
+      params: *id005
+      when: *id009
+- id: acoustics_cross6_narrow_018
+  scope: world
+  world: acoustics_cross6_narrow
+  targets: ['A:evacuation']
+  text: The fire alarm goes off and everyone heads for the exit, once the robot is
+    halfway.
+  oracle:
+    A: {case: evacuation}
+- id: acoustics_cross6_narrow_019
+  scope: world
+  world: acoustics_cross6_narrow
+  targets: ['A:stampede', 'C:approach']
+  text: 'A shift change: everyone surges back to their posts, nobody yields, after
+    half a minute. A visitor walks up to the robot further down the robot''s route,
+    stops right in front of it and stares at it for a good half minute.'
+  oracle:
+    A: {case: stampede}
+    C: {profile: adult, route_fraction: 0.7, case: approach, angle: 180, after: stop_facing,
+      duration: 30}
+- id: acoustics_cross6_narrow_020
+  scope: world
+  world: acoustics_cross6_narrow
+  targets: ['B:intrinsic', 'C:blocking']
+  text: Nobody is looking where they are walking, twenty seconds in. A visitor shuffles
+    along slowly right in the robot's way, right in front of the robot.
+  oracle:
+    B:
+      case: intrinsic
+      select: {amount: all}
+      params: {vision_fov: low}
+      when: *id010
+    C: {profile: adult, route_fraction: 0.5, case: blocking, mode: lead}

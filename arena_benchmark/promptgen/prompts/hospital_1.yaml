@@ -1,0 +1,261 @@
+- id: hospital_1_001
+  scope: world
+  world: hospital_1
+  targets: ['C:approach']
+  text: A nurse walks up to the robot further down the robot's route and then follows
+    it around for a moment.
+  oracle:
+    C: {profile: nurse, route_fraction: 0.7, case: approach, angle: 180, after: follow,
+      duration: 4}
+- id: hospital_1_002
+  scope: world
+  world: hospital_1
+  targets: ['A:evacuation']
+  text: An evacuation is called; everybody makes for the exit, as soon as the robot
+    sets off.
+  oracle:
+    A: {case: evacuation}
+- id: hospital_1_003
+  scope: world
+  world: hospital_1
+  targets: ['D:interaction_unbroken', 'B:intrinsic', 'C:approach']
+  text: Three colleagues stand talking in the waiting area and will not stop. Nobody
+    is looking where they are walking. An old man crosses the robot's path from the
+    right, right in the robot's way.
+  oracle:
+    D:
+      case: interaction_unbroken
+      variant: standing
+      members: &id001 [adult, adult, adult]
+      place: {zone: waiting_area}
+    B:
+      case: intrinsic
+      select: &id006 {amount: all}
+      params: &id007 {vision_fov: low}
+    C: {profile: elder, route_fraction: 0.5, case: approach, angle: 90, after: continue}
+- id: hospital_1_004
+  scope: world
+  world: hospital_1
+  targets: ['B:intrinsic']
+  text: Half the people here are rushing, twenty seconds in.
+  oracle:
+    B:
+      case: intrinsic
+      select: &id011 {amount: half}
+      params: &id012 {speed: high}
+      when: {at: 20}
+- id: hospital_1_005
+  scope: world
+  world: hospital_1
+  targets: ['A:blackout', 'D:formation_break']
+  text: A power cut leaves the whole floor in the dark. Four people stand in a circle
+    halfway along the robot's route; they scatter after half a minute.
+  oracle:
+    A: {case: blackout}
+    D:
+      case: formation_break
+      variant: circle
+      break: scatter
+      members: &id002 [adult, adult, adult, adult]
+      place: {route_fraction: 0.5}
+      when: {at: 30}
+- id: hospital_1_006
+  scope: world
+  world: hospital_1
+  targets: ['A:evacuation']
+  text: An evacuation is called; everybody makes for the exit.
+  oracle:
+    A: {case: evacuation}
+- id: hospital_1_007
+  scope: world
+  world: hospital_1
+  targets: ['A:stampede', 'C:approach']
+  text: The break is over and the whole crowd rushes back to work all at once, pushing
+    through, as soon as the robot sets off. An old man comes up fast from behind and
+    overtakes the robot further down the robot's route.
+  oracle:
+    A: {case: stampede}
+    C: {profile: elder, route_fraction: 0.7, case: approach, angle: 0, speed: high,
+      after: continue}
+- id: hospital_1_008
+  scope: world
+  world: hospital_1
+  targets: ['D:interaction_unbroken', 'B:erratic_route', 'C:blocking']
+  text: Two nurses stand side by side across the corridor just ahead of the robot,
+    chatting, and do not move aside. Some people wander about with no settled destination,
+    once the robot is halfway. An absent-minded man shuffles along slowly further
+    down the robot's route, right in front of the robot.
+  oracle:
+    D:
+      case: interaction_unbroken
+      variant: blocking
+      members: &id005 [nurse, nurse]
+      place: {route_fraction: 0.3}
+    B:
+      case: erratic_route
+      select: &id015 {amount: half}
+      when: &id010 {route_fraction: 0.5}
+    C: {profile: distracted, route_fraction: 0.7, case: blocking, mode: lead}
+- id: hospital_1_009
+  scope: world
+  world: hospital_1
+  targets: ['D:formation_break', 'B:erratic_route']
+  text: Three colleagues stand in a circle in the nurse resting room; they scatter
+    when the robot is right there. A few people keep changing their minds about where
+    they are going.
+  oracle:
+    D:
+      case: formation_break
+      variant: circle
+      break: scatter
+      members: *id001
+      place: {zone: nurse_resting_room}
+      when: {robot_within: 1.5}
+    B:
+      case: erratic_route
+      select: &id003 {n: 3}
+- id: hospital_1_010
+  scope: world
+  world: hospital_1
+  targets: ['D:formation_break']
+  text: Four people stand in a circle in the waiting area; they scatter once the robot
+    is halfway.
+  oracle:
+    D:
+      case: formation_break
+      variant: circle
+      break: scatter
+      members: *id002
+      place: {zone: waiting_area}
+      when: &id014 {route_fraction: 0.5}
+- id: hospital_1_011
+  scope: world
+  world: hospital_1
+  targets: ['C:approach']
+  text: A visitor walks up to the robot halfway along the robot's route, stops right
+    in front of it and stares at it for a moment.
+  oracle:
+    C: {profile: adult, route_fraction: 0.5, case: approach, angle: 180, after: stop_facing,
+      duration: 4}
+- id: hospital_1_012
+  scope: world
+  world: hospital_1
+  targets: ['B:erratic_route']
+  text: A few people keep changing their minds about where they are going, after half
+    a minute.
+  oracle:
+    B:
+      case: erratic_route
+      select: *id003
+      when: &id004 {at: 30}
+- id: hospital_1_013
+  scope: world
+  world: hospital_1
+  targets: ['A:blackout', 'B:intrinsic']
+  text: A power cut leaves the whole floor in the dark, twenty seconds in. Half of
+    the people here are visually impaired and cannot see the robot until it is close,
+    after half a minute.
+  oracle:
+    A: {case: blackout}
+    B:
+      case: intrinsic
+      select: &id008 {amount: half}
+      params: &id009 {vision_range: low, vision_fov: low}
+      when: *id004
+- id: hospital_1_014
+  scope: world
+  world: hospital_1
+  targets: ['A:evacuation', 'D:interaction_unbroken']
+  text: The fire alarm goes off and everyone heads for the exit, twenty seconds in.
+    Two nurses stand side by side across the corridor right in the robot's way, chatting,
+    and do not move aside.
+  oracle:
+    A: {case: evacuation}
+    D:
+      case: interaction_unbroken
+      variant: blocking
+      members: *id005
+      place: {route_fraction: 0.5}
+- id: hospital_1_015
+  scope: world
+  world: hospital_1
+  targets: ['B:intrinsic', 'C:approach']
+  text: Nobody is looking where they are walking, after half a minute. A nurse crosses
+    the robot's path from the right, halfway along the robot's route.
+  oracle:
+    B:
+      case: intrinsic
+      select: *id006
+      params: *id007
+      when: *id004
+    C: {profile: nurse, route_fraction: 0.5, case: approach, angle: 90, after: continue}
+- id: hospital_1_016
+  scope: world
+  world: hospital_1
+  targets: ['A:busy', 'B:intrinsic']
+  text: It is visiting hours and the place is packed. Half of the people here are
+    visually impaired and cannot see the robot until it is close, after a while.
+  oracle:
+    A: {case: busy}
+    B:
+      case: intrinsic
+      select: *id008
+      params: *id009
+      when: &id013 {at: 10}
+- id: hospital_1_017
+  scope: world
+  world: hospital_1
+  targets: ['A:blackout', 'D:interaction_unbroken', 'B:intrinsic']
+  text: The lights go out and everyone slows down, feeling their way, after half a
+    minute. Two nurses stand side by side across the corridor in the central hallway,
+    chatting, and do not move aside. The elderly people are slow to react and do not
+    get out of the way, once the robot is halfway.
+  oracle:
+    A: {case: blackout}
+    D:
+      case: interaction_unbroken
+      variant: blocking
+      members: *id005
+      place: {zone: central_hallway}
+    B:
+      case: intrinsic
+      select: {profile: elder}
+      params: {reaction: high, repulsion: low}
+      when: *id010
+- id: hospital_1_018
+  scope: world
+  world: hospital_1
+  targets: ['B:intrinsic']
+  text: Half the people here are rushing, after a while.
+  oracle:
+    B:
+      case: intrinsic
+      select: *id011
+      params: *id012
+      when: *id013
+- id: hospital_1_019
+  scope: world
+  world: hospital_1
+  targets: ['D:formation_break', 'B:erratic_route']
+  text: A doctor and two visitors stand in a circle in the operating room; they scatter
+    once the robot is halfway. Some people wander about with no settled destination,
+    after a while.
+  oracle:
+    D:
+      case: formation_break
+      variant: circle
+      break: scatter
+      members: [doctor, adult, adult]
+      place: {zone: operating_room}
+      when: *id014
+    B:
+      case: erratic_route
+      select: *id015
+      when: *id013
+- id: hospital_1_020
+  scope: world
+  world: hospital_1
+  targets: ['C:blocking']
+  text: A nurse stands still further down the robot's route, blocking it for a while.
+  oracle:
+    C: {profile: nurse, route_fraction: 0.7, case: blocking, mode: stand, duration: 12}

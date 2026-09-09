@@ -1,0 +1,276 @@
+- id: acoustics_bend_wide_001
+  scope: world
+  world: acoustics_bend_wide
+  targets: ['A:evacuation', 'B:erratic_route']
+  text: The fire alarm goes off and everyone heads for the exit, as soon as the robot
+    sets off. A few people keep changing their minds about where they are going, from
+    the start.
+  oracle:
+    A: {case: evacuation}
+    B:
+      case: erratic_route
+      select: &id002 {n: 3}
+      when: &id004 {at: 0}
+- id: acoustics_bend_wide_002
+  scope: world
+  world: acoustics_bend_wide
+  targets: ['D:stubborn', 'B:intrinsic', 'C:approach']
+  text: A child walks towards the robot further down the robot's route, wants to keep
+    going and refuses to give way. Nobody is looking where they are walking, after
+    a while. An old man walks up to the robot just ahead of the robot and then follows
+    it around for a while.
+  oracle:
+    D: {case: stubborn, profile: child, route_fraction: 0.7}
+    B:
+      case: intrinsic
+      select: {amount: all}
+      params: {vision_fov: low}
+      when: {at: 10}
+    C: {profile: elder, route_fraction: 0.3, case: approach, angle: 180, after: follow,
+      duration: 12}
+- id: acoustics_bend_wide_003
+  scope: world
+  world: acoustics_bend_wide
+  targets: ['A:blackout', 'D:formation_break', 'C:blocking']
+  text: The lights go out and everyone slows down, feeling their way, as soon as the
+    robot sets off. Four people stand in a circle in the arm w; they scatter after
+    half a minute. A man in a hurry shuffles along slowly further down the robot's
+    route, right in front of the robot.
+  oracle:
+    A: {case: blackout}
+    D:
+      case: formation_break
+      variant: circle
+      break: scatter
+      members: &id005 [adult, adult, adult, adult]
+      place: {zone: arm_w}
+      when: {at: 30}
+    C: {profile: hurried, route_fraction: 0.7, case: blocking, mode: lead}
+- id: acoustics_bend_wide_004
+  scope: world
+  world: acoustics_bend_wide
+  targets: ['A:stampede']
+  text: 'A shift change: everyone surges back to their posts, nobody yields, after
+    half a minute.'
+  oracle:
+    A: {case: stampede}
+- id: acoustics_bend_wide_005
+  scope: world
+  world: acoustics_bend_wide
+  targets: ['A:busy', 'D:interaction_unbroken', 'C:approach']
+  text: It is visiting hours and the place is packed. A doctor and two visitors walk
+    in from different rooms, meet right in the robot's way and talk forever. An absent-minded
+    man crosses the robot's path from the right, just ahead of the robot.
+  oracle:
+    A: {case: busy}
+    D:
+      case: interaction_unbroken
+      variant: meet
+      members: &id001 [doctor, adult, adult]
+      place: {route_fraction: 0.5}
+    C: {profile: distracted, route_fraction: 0.3, case: approach, angle: 90, after: continue}
+- id: acoustics_bend_wide_006
+  scope: world
+  world: acoustics_bend_wide
+  targets: ['A:blackout', 'D:formation_break']
+  text: A power cut leaves the whole floor in the dark. A doctor and two visitors
+    stand in a circle right in the robot's way; they scatter as the robot arrives.
+  oracle:
+    A: {case: blackout}
+    D:
+      case: formation_break
+      variant: circle
+      break: scatter
+      members: *id001
+      place: {route_fraction: 0.5}
+      when: &id003 {robot_within: 3.0}
+- id: acoustics_bend_wide_007
+  scope: world
+  world: acoustics_bend_wide
+  targets: ['D:stubborn', 'C:blocking']
+  text: A doctor walks towards the robot halfway along the robot's route, wants to
+    keep going and refuses to give way. A child shuffles along slowly halfway along
+    the robot's route, right in front of the robot.
+  oracle:
+    D: {case: stubborn, profile: doctor, route_fraction: 0.5}
+    C: {profile: child, route_fraction: 0.5, case: blocking, mode: lead}
+- id: acoustics_bend_wide_008
+  scope: world
+  world: acoustics_bend_wide
+  targets: ['D:interaction_unbroken', 'B:intrinsic']
+  text: A doctor and two visitors stand talking further down the robot's route and
+    will not stop. Half of the people here are visually impaired and cannot see the
+    robot until it is close, after half a minute.
+  oracle:
+    D:
+      case: interaction_unbroken
+      variant: standing
+      members: *id001
+      place: {route_fraction: 0.7}
+    B:
+      case: intrinsic
+      select: {amount: half}
+      params: {vision_range: low, vision_fov: low}
+      when: {at: 30}
+- id: acoustics_bend_wide_009
+  scope: world
+  world: acoustics_bend_wide
+  targets: ['A:evacuation', 'B:erratic_route', 'C:approach']
+  text: An evacuation is called; everybody makes for the exit, after half a minute.
+    A few people keep changing their minds about where they are going, once the robot
+    is halfway. An old man walks up to the robot right in the robot's way and then
+    follows it around for a long time.
+  oracle:
+    A: {case: evacuation}
+    B:
+      case: erratic_route
+      select: *id002
+      when: {route_fraction: 0.5}
+    C: {profile: elder, route_fraction: 0.5, case: approach, angle: 180, after: follow,
+      duration: 30}
+- id: acoustics_bend_wide_010
+  scope: world
+  world: acoustics_bend_wide
+  targets: ['A:stampede']
+  text: The break is over and the whole crowd rushes back to work all at once, pushing
+    through, after half a minute.
+  oracle:
+    A: {case: stampede}
+- id: acoustics_bend_wide_011
+  scope: world
+  world: acoustics_bend_wide
+  targets: ['A:busy', 'D:formation_break', 'B:erratic_route', 'C:blocking']
+  text: It is visiting hours and the place is packed. Three colleagues are queuing
+    in the arm w and the queue breaks up as the robot arrives, everyone walking off.
+    A few people keep changing their minds about where they are going. A child stands
+    still halfway along the robot's route, blocking it for a good half minute.
+  oracle:
+    A: {case: busy}
+    D:
+      case: formation_break
+      variant: line
+      break: disperse
+      members: &id006 [adult, adult, adult]
+      place: {zone: arm_w}
+      when: *id003
+    B:
+      case: erratic_route
+      select: *id002
+    C: {profile: child, route_fraction: 0.5, case: blocking, mode: stand, duration: 30}
+- id: acoustics_bend_wide_012
+  scope: world
+  world: acoustics_bend_wide
+  targets: ['A:stampede', 'D:stubborn', 'B:intrinsic']
+  text: The break is over and the whole crowd rushes back to work all at once, pushing
+    through. An absent-minded man walks towards the robot further down the robot's
+    route, wants to keep going and refuses to give way. Half the people here are rushing,
+    from the start.
+  oracle:
+    A: {case: stampede}
+    D: {case: stubborn, profile: distracted, route_fraction: 0.7}
+    B:
+      case: intrinsic
+      select: {amount: half}
+      params: {speed: high}
+      when: *id004
+- id: acoustics_bend_wide_013
+  scope: world
+  world: acoustics_bend_wide
+  targets: ['A:blackout', 'D:interaction_unbroken']
+  text: The lights go out and everyone slows down, feeling their way, twenty seconds
+    in. A doctor and two visitors walk in from different rooms, meet in the arm n
+    and talk forever.
+  oracle:
+    A: {case: blackout}
+    D:
+      case: interaction_unbroken
+      variant: meet
+      members: *id001
+      place: {zone: arm_n}
+- id: acoustics_bend_wide_014
+  scope: world
+  world: acoustics_bend_wide
+  targets: ['A:busy']
+  text: It is visiting hours and the place is packed.
+  oracle:
+    A: {case: busy}
+- id: acoustics_bend_wide_015
+  scope: world
+  world: acoustics_bend_wide
+  targets: ['A:evacuation', 'D:stubborn']
+  text: The fire alarm goes off and everyone heads for the exit, after a while. An
+    old man walks towards the robot just ahead of the robot, wants to keep going and
+    refuses to give way.
+  oracle:
+    A: {case: evacuation}
+    D: {case: stubborn, profile: elder, route_fraction: 0.3}
+- id: acoustics_bend_wide_016
+  scope: world
+  world: acoustics_bend_wide
+  targets: ['D:formation_break']
+  text: Four people stand in a circle halfway along the robot's route; they scatter
+    after a while.
+  oracle:
+    D:
+      case: formation_break
+      variant: circle
+      break: scatter
+      members: *id005
+      place: {route_fraction: 0.5}
+      when: {at: 10}
+- id: acoustics_bend_wide_017
+  scope: world
+  world: acoustics_bend_wide
+  targets: ['D:interaction_unbroken']
+  text: Three colleagues stand side by side across the corridor right in the robot's
+    way, chatting, and do not move aside.
+  oracle:
+    D:
+      case: interaction_unbroken
+      variant: blocking
+      members: *id006
+      place: {route_fraction: 0.5}
+- id: acoustics_bend_wide_018
+  scope: world
+  world: acoustics_bend_wide
+  targets: ['C:blocking']
+  text: A man in a hurry shuffles along slowly halfway along the robot's route, right
+    in front of the robot.
+  oracle:
+    C: {profile: hurried, route_fraction: 0.5, case: blocking, mode: lead}
+- id: acoustics_bend_wide_019
+  scope: world
+  world: acoustics_bend_wide
+  targets: ['A:busy', 'B:intrinsic', 'C:approach']
+  text: The floor is busy today, twice as many people as usual. The elderly people
+    are slow to react and do not get out of the way, after half a minute. A doctor
+    walks straight at the robot further down the robot's route and keeps going.
+  oracle:
+    A: {case: busy}
+    B:
+      case: intrinsic
+      select: {profile: elder}
+      params: {reaction: high, repulsion: low}
+      when: {at: 30}
+    C: {profile: doctor, route_fraction: 0.7, case: approach, angle: 180, after: continue}
+- id: acoustics_bend_wide_020
+  scope: world
+  world: acoustics_bend_wide
+  targets: ['A:blackout', 'D:formation_break', 'B:erratic_route']
+  text: The lights go out and everyone slows down, feeling their way, after half a
+    minute. Three colleagues are queuing further down the robot's route and the queue
+    breaks up as the robot arrives, everyone walking off. A few people keep changing
+    their minds about where they are going, forty seconds in.
+  oracle:
+    A: {case: blackout}
+    D:
+      case: formation_break
+      variant: line
+      break: disperse
+      members: *id006
+      place: {route_fraction: 0.7}
+      when: *id003
+    B:
+      case: erratic_route
+      select: *id002
+      when: {at: 40}

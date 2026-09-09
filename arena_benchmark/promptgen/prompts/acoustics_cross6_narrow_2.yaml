@@ -1,0 +1,123 @@
+- id: acoustics_cross6_narrow_101
+  scope: world
+  world: acoustics_cross6_narrow
+  targets: ['A:busy', 'D:stubborn']
+  text: It is visiting hours and the place is packed. A man in a hurry walks towards
+    the robot halfway along the robot's route, wants to keep going and refuses to
+    give way.
+  oracle:
+    A: {case: busy}
+    D: {case: stubborn, profile: hurried, route_fraction: 0.5}
+- id: acoustics_cross6_narrow_102
+  scope: world
+  world: acoustics_cross6_narrow
+  targets: ['D:formation_break']
+  text: Three colleagues are queuing in the arm ne and the queue breaks up when the
+    robot is right there, everyone walking off.
+  oracle:
+    D:
+      case: formation_break
+      variant: line
+      break: disperse
+      members: [adult, adult, adult]
+      place: {zone: arm_ne}
+      when: &id001 {robot_within: 1.5}
+- id: acoustics_cross6_narrow_103
+  scope: world
+  world: acoustics_cross6_narrow
+  targets: ['A:busy', 'D:formation_break']
+  text: The floor is busy today, twice as many people as usual. Two nurses stand in
+    a circle just ahead of the robot; they scatter when the robot is right there.
+  oracle:
+    A: {case: busy}
+    D:
+      case: formation_break
+      variant: circle
+      break: scatter
+      members: &id002 [nurse, nurse]
+      place: {route_fraction: 0.3}
+      when: *id001
+- id: acoustics_cross6_narrow_104
+  scope: world
+  world: acoustics_cross6_narrow
+  targets: ['A:blackout', 'D:stubborn']
+  text: The lights go out and everyone slows down, feeling their way, after half a
+    minute. A doctor walks towards the robot halfway along the robot's route, wants
+    to keep going and refuses to give way.
+  oracle:
+    A: {case: blackout}
+    D: {case: stubborn, profile: doctor, route_fraction: 0.5}
+- id: acoustics_cross6_narrow_105
+  scope: world
+  world: acoustics_cross6_narrow
+  targets: ['A:evacuation', 'D:stubborn', 'B:erratic_route']
+  text: The fire alarm goes off and everyone heads for the exit, once the robot is
+    halfway. A man in a hurry walks towards the robot halfway along the robot's route,
+    wants to keep going and refuses to give way. Some people wander about with no
+    settled destination, after half a minute.
+  oracle:
+    A: {case: evacuation}
+    D: {case: stubborn, profile: hurried, route_fraction: 0.5}
+    B:
+      case: erratic_route
+      select: &id003 {amount: half}
+      when: {at: 30}
+- id: acoustics_cross6_narrow_106
+  scope: world
+  world: acoustics_cross6_narrow
+  targets: ['D:formation_break']
+  text: A doctor and two visitors stand in a circle right in the robot's way; they
+    scatter once the robot is halfway.
+  oracle:
+    D:
+      case: formation_break
+      variant: circle
+      break: scatter
+      members: [doctor, adult, adult]
+      place: {route_fraction: 0.5}
+      when: {route_fraction: 0.5}
+- id: acoustics_cross6_narrow_107
+  scope: world
+  world: acoustics_cross6_narrow
+  targets: ['A:stampede', 'D:formation_break']
+  text: The break is over and the whole crowd rushes back to work all at once, pushing
+    through, after a while. Two nurses stand in a circle in the arm w; they scatter
+    when the robot is right there.
+  oracle:
+    A: {case: stampede}
+    D:
+      case: formation_break
+      variant: circle
+      break: scatter
+      members: *id002
+      place: {zone: arm_w}
+      when: *id001
+- id: acoustics_cross6_narrow_108
+  scope: world
+  world: acoustics_cross6_narrow
+  targets: ['A:busy', 'D:stubborn']
+  text: The floor is busy today, twice as many people as usual. An absent-minded man
+    walks towards the robot just ahead of the robot, wants to keep going and refuses
+    to give way.
+  oracle:
+    A: {case: busy}
+    D: {case: stubborn, profile: distracted, route_fraction: 0.3}
+- id: acoustics_cross6_narrow_109
+  scope: world
+  world: acoustics_cross6_narrow
+  targets: ['A:busy']
+  text: It is visiting hours and the place is packed.
+  oracle:
+    A: {case: busy}
+- id: acoustics_cross6_narrow_110
+  scope: world
+  world: acoustics_cross6_narrow
+  targets: ['A:blackout', 'B:erratic_route']
+  text: A power cut leaves the whole floor in the dark, as soon as the robot sets
+    off. Some people wander about with no settled destination, twenty seconds in.
+  oracle:
+    A: {case: blackout}
+    B:
+      case: erratic_route
+      select: *id003
+      when: {at: 20}

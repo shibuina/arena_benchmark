@@ -11,7 +11,6 @@ import json
 
 import pytest
 import yaml
-
 from arena_benchmark.bake import BakeError, bake_case, is_bakeable, scenario_id
 
 CASE = {

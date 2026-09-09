@@ -26,8 +26,12 @@ setup(
         # generated agent is a builtin `mode: simple` type and Level D cases are inert.
         (os.path.join('share', package_name, 'agent_types'),
          existing('arena_benchmark/scenario/agent_types/*.yaml')),
+        (os.path.join('share', package_name, 'promptgen'),
+         existing('arena_benchmark/promptgen/*.md', 'arena_benchmark/promptgen/*.yaml')),
+        (os.path.join('share', package_name, 'promptgen', 'prompts'),
+         existing('arena_benchmark/promptgen/prompts/*.yaml')),
     ],
-    package_data={package_name: ['../specs/*.yaml', 'scenario/agent_types/*.yaml']},
+    package_data={package_name: ['../specs/*.yaml', 'scenario/agent_types/*.yaml', 'promptgen/*.md', 'promptgen/*.yaml', 'promptgen/prompts/*.yaml']},
     install_requires=['setuptools', 'attrs>=22', 'PyYAML>=6'],
     extras_require={
         # Assembly and analysis only. Kept out of install_requires so the spec and

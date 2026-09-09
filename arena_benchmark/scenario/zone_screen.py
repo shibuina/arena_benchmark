@@ -52,7 +52,7 @@ import attrs
 if typing.TYPE_CHECKING:
     import numpy as np
 
-from .occupancy import AGENT_RADIUS, BREATHING_ROOM
+from .occupancy import AGENT_RADIUS, BREATHING_ROOM, static_polygon
 
 #: What `TM_Scenario.reset` passes to `make_is_valid`: `Obstacles.SAFE_DIST` (0.15, a sampling
 #: margin) plus `Obstacles.PEDESTRIAN_BODY_RADIUS` (0.25, the nominal adult body). Mirrored from
@@ -110,17 +110,23 @@ def _load_grid(world_root: str | Path) -> tuple[np.ndarray, float, float, float]
 
 
 def _stamp_statics(occupied: np.ndarray, statics: Sequence[Mapping[str, Any]], res: float, ox: float, oy: float) -> None:
-    """Add the world's furniture to the wall mask, the way `WorldManager` does at load.
+    """Add the world's furniture to the wall mask.
 
-    `obstacle_occupy` fills the axis-aligned *rectangle* around the footprint radius rather than
-    the disc, so this does too. Matching the runtime matters more than being tighter than it: a
-    screen that models a kinder grid than the resolver uses clears zones the resolver will then
-    fail in.
+    A static with a known box (`static_polygon`: the annotation's bounding box, offset and
+    rotated as the model stands - what the human simulator and, through its laser, nav2 see)
+    is stamped as that rectangle. Without one, the axis-aligned rectangle around the footprint
+    radius, the way `WorldManager`'s `obstacle_occupy` does at load. The reception desk's box
+    runs 0..2.42 m from its origin: as a 0.5 m disc around the origin it left a robot goal on
+    the desk's edge looking free (hospital_1, 2026-08-29).
     """
     height, width = occupied.shape
     for obj in statics:
         pose = obj.get("pose")
         if not isinstance(pose, (list, tuple)) or len(pose) < 2:
+            continue
+        poly = static_polygon(obj)
+        if poly is not None:
+            occupied |= _rasterize(poly, occupied.shape, res, ox, oy)
             continue
         radius = float(obj.get("radius") or obj.get("interaction_radius") or 0.5)
         x, y = float(pose[0]), float(pose[1])

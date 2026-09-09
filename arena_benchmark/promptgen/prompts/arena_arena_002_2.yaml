@@ -1,0 +1,117 @@
+- id: arena_arena_002_101
+  scope: world
+  world: arena_arena_002
+  targets: ['A:busy', 'D:formation_break', 'B:erratic_route', 'C:blocking']
+  text: The floor is busy today, twice as many people as usual. A doctor and two visitors
+    are queuing just ahead of the robot and the queue breaks up after half a minute,
+    everyone walking off. A few people keep changing their minds about where they
+    are going, after a while. A man in a hurry stands still halfway along the robot's
+    route, blocking it for a few seconds.
+  oracle:
+    A: {case: busy}
+    D:
+      case: formation_break
+      variant: line
+      break: disperse
+      members: [doctor, adult, adult]
+      place: {route_fraction: 0.3}
+      when: {at: 30}
+    B:
+      case: erratic_route
+      select: {n: 3}
+      when: {at: 10}
+    C: {profile: hurried, route_fraction: 0.5, case: blocking, mode: stand, duration: 6}
+- id: arena_arena_002_102
+  scope: world
+  world: arena_arena_002
+  targets: ['B:erratic_route']
+  text: Some people wander about with no settled destination, once the robot is halfway.
+  oracle:
+    B:
+      case: erratic_route
+      select: &id001 {amount: half}
+      when: &id002 {route_fraction: 0.5}
+- id: arena_arena_002_103
+  scope: world
+  world: arena_arena_002
+  targets: ['A:busy']
+  text: The floor is busy today, twice as many people as usual.
+  oracle:
+    A: {case: busy}
+- id: arena_arena_002_104
+  scope: world
+  world: arena_arena_002
+  targets: ['B:erratic_route', 'C:blocking']
+  text: Some people wander about with no settled destination, forty seconds in. A
+    visitor stands still halfway along the robot's route, blocking it for a good half
+    minute.
+  oracle:
+    B:
+      case: erratic_route
+      select: *id001
+      when: {at: 40}
+    C: {profile: adult, route_fraction: 0.5, case: blocking, mode: stand, duration: 30}
+- id: arena_arena_002_105
+  scope: world
+  world: arena_arena_002
+  targets: ['A:blackout']
+  text: A power cut leaves the whole floor in the dark, as soon as the robot sets
+    off.
+  oracle:
+    A: {case: blackout}
+- id: arena_arena_002_106
+  scope: world
+  world: arena_arena_002
+  targets: ['D:stubborn']
+  text: A doctor walks towards the robot halfway along the robot's route, wants to
+    keep going and refuses to give way.
+  oracle:
+    D: {case: stubborn, profile: doctor, route_fraction: 0.5}
+- id: arena_arena_002_107
+  scope: world
+  world: arena_arena_002
+  targets: ['A:evacuation', 'D:formation_break']
+  text: The fire alarm goes off and everyone heads for the exit, as soon as the robot
+    sets off. Four people are queuing further down the robot's route and the queue
+    breaks up after a while, everyone walking off.
+  oracle:
+    A: {case: evacuation}
+    D:
+      case: formation_break
+      variant: line
+      break: disperse
+      members: [adult, adult, adult, adult]
+      place: {route_fraction: 0.7}
+      when: {at: 10}
+- id: arena_arena_002_108
+  scope: world
+  world: arena_arena_002
+  targets: ['A:busy', 'B:erratic_route', 'C:blocking']
+  text: It is visiting hours and the place is packed. Some people wander about with
+    no settled destination, once the robot is halfway. An absent-minded man shuffles
+    along slowly halfway along the robot's route, right in front of the robot.
+  oracle:
+    A: {case: busy}
+    B:
+      case: erratic_route
+      select: *id001
+      when: *id002
+    C: {profile: distracted, route_fraction: 0.5, case: blocking, mode: lead}
+- id: arena_arena_002_109
+  scope: world
+  world: arena_arena_002
+  targets: ['A:stampede']
+  text: The break is over and the whole crowd rushes back to work all at once, pushing
+    through, once the robot is halfway.
+  oracle:
+    A: {case: stampede}
+- id: arena_arena_002_110
+  scope: world
+  world: arena_arena_002
+  targets: ['A:blackout', 'D:stubborn']
+  text: The lights go out and everyone slows down, feeling their way, after half a
+    minute. A doctor walks towards the robot halfway along the robot's route, wants
+    to keep going and refuses to give way.
+  oracle:
+    A: {case: blackout}
+    D: {case: stubborn, profile: doctor, route_fraction: 0.5}

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from arena_benchmark.orchestrate import shard, summarise, sweep_plan
+from arena_benchmark.orchestrate import shard, summarise
 from arena_benchmark.spec import expand, parse_spec
 
 SPEC = {
@@ -72,18 +72,6 @@ def test_arm_extra_reaches_the_launch_and_splits_shards():
     assert len(shards) == 4
     tuned = next(s for s in shards if s.arm_id == "nav2_tuned")
     assert tuned.launch_args()["headless"] == "true"
-
-
-def test_plan_labels_every_case_with_its_episode_uid():
-    """The join key end to end - the runner copies it into trials.jsonl verbatim."""
-    s = shard(episodes())[0]
-    plan = sweep_plan(s)
-    assert [c["label"] for c in plan["cases"]] == [e.episode_uid for e in s.episodes]
-
-
-def test_plan_disables_the_runners_own_baseline():
-    """Ours are explicit cells; the runner's would be trials with no manifest row."""
-    assert sweep_plan(shard(episodes())[0])["baseline"] is False
 
 
 def test_summary_counts_the_whole_run():

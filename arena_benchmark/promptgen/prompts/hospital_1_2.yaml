@@ -1,0 +1,105 @@
+- id: hospital_1_101
+  scope: world
+  world: hospital_1
+  targets: ['A:stampede', 'D:stubborn']
+  text: 'A shift change: everyone surges back to their posts, nobody yields, after
+    half a minute. An old man walks towards the robot halfway along the robot''s route,
+    wants to keep going and refuses to give way.'
+  oracle:
+    A: {case: stampede}
+    D: {case: stubborn, profile: elder, route_fraction: 0.5}
+- id: hospital_1_102
+  scope: world
+  world: hospital_1
+  targets: ['A:busy']
+  text: The floor is busy today, twice as many people as usual.
+  oracle:
+    A: {case: busy}
+- id: hospital_1_103
+  scope: world
+  world: hospital_1
+  targets: ['A:stampede', 'D:stubborn', 'C:blocking']
+  text: The break is over and the whole crowd rushes back to work all at once, pushing
+    through. An absent-minded man walks towards the robot just ahead of the robot,
+    wants to keep going and refuses to give way. A visitor stands still further down
+    the robot's route, blocking it for a long time.
+  oracle:
+    A: {case: stampede}
+    D: {case: stubborn, profile: distracted, route_fraction: 0.3}
+    C: {profile: adult, route_fraction: 0.7, case: blocking, mode: stand, duration: 30}
+- id: hospital_1_104
+  scope: world
+  world: hospital_1
+  targets: ['A:busy']
+  text: It is visiting hours and the place is packed.
+  oracle:
+    A: {case: busy}
+- id: hospital_1_105
+  scope: world
+  world: hospital_1
+  targets: ['D:stubborn']
+  text: An absent-minded man walks towards the robot halfway along the robot's route,
+    wants to keep going and refuses to give way.
+  oracle:
+    D: {case: stubborn, profile: distracted, route_fraction: 0.5}
+- id: hospital_1_106
+  scope: world
+  world: hospital_1
+  targets: ['C:blocking']
+  text: An absent-minded man shuffles along slowly halfway along the robot's route,
+    right in front of the robot.
+  oracle:
+    C: {profile: distracted, route_fraction: 0.5, case: blocking, mode: lead}
+- id: hospital_1_107
+  scope: world
+  world: hospital_1
+  targets: ['A:evacuation', 'D:stubborn', 'C:blocking']
+  text: An evacuation is called; everybody makes for the exit. A nurse walks towards
+    the robot halfway along the robot's route, wants to keep going and refuses to
+    give way. A doctor shuffles along slowly just ahead of the robot, right in front
+    of the robot.
+  oracle:
+    A: {case: evacuation}
+    D: {case: stubborn, profile: nurse, route_fraction: 0.5}
+    C: {profile: doctor, route_fraction: 0.3, case: blocking, mode: lead}
+- id: hospital_1_108
+  scope: world
+  world: hospital_1
+  targets: ['A:blackout']
+  text: A power cut leaves the whole floor in the dark, as soon as the robot sets
+    off.
+  oracle:
+    A: {case: blackout}
+- id: hospital_1_109
+  scope: world
+  world: hospital_1
+  targets: ['A:stampede', 'D:stubborn', 'B:erratic_route', 'C:approach']
+  text: The break is over and the whole crowd rushes back to work all at once, pushing
+    through. A child walks towards the robot halfway along the robot's route, wants
+    to keep going and refuses to give way. A few people keep changing their minds
+    about where they are going, from the start. An old man comes up fast from behind
+    and overtakes the robot halfway along the robot's route.
+  oracle:
+    A: {case: stampede}
+    D: {case: stubborn, profile: child, route_fraction: 0.5}
+    B:
+      case: erratic_route
+      select: {n: 3}
+      when: {at: 0}
+    C: {profile: elder, route_fraction: 0.5, case: approach, angle: 0, speed: high,
+      after: continue}
+- id: hospital_1_110
+  scope: world
+  world: hospital_1
+  targets: ['A:busy', 'D:interaction_unbroken', 'C:blocking']
+  text: The floor is busy today, twice as many people as usual. Four people stand
+    talking just ahead of the robot and will not stop. A visitor shuffles along slowly
+    halfway along the robot's route, right in front of the robot.
+  oracle:
+    A: {case: busy}
+    D:
+      case: interaction_unbroken
+      variant: standing
+      members: [adult, adult, adult, adult]
+      place: {route_fraction: 0.3}
+    C: {profile: adult, route_fraction: 0.5, case: blocking, mode: lead}

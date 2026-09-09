@@ -1,0 +1,554 @@
+- id: u_001
+  scope: universal
+  world: ''
+  targets: ['D:interaction_unbroken', 'B:intrinsic', 'C:approach']
+  text: Three colleagues stand talking further down the robot's route and will not
+    stop. Nobody is looking where they are walking, from the start. A visitor walks
+    up to the robot halfway along the robot's route, stops right in front of it and
+    stares at it for a good half minute.
+  oracle:
+    D:
+      case: interaction_unbroken
+      variant: standing
+      members: &id010 [adult, adult, adult]
+      place: {route_fraction: 0.7}
+    B:
+      case: intrinsic
+      select: &id014 {amount: all}
+      params: &id015 {vision_fov: low}
+      when: &id005 {at: 0}
+    C: {profile: adult, route_fraction: 0.5, case: approach, angle: 180, after: stop_facing,
+      duration: 30}
+- id: u_002
+  scope: universal
+  world: ''
+  targets: ['B:intrinsic']
+  text: Half the people here are rushing.
+  oracle:
+    B: &id001
+      case: intrinsic
+      select: &id008 {amount: half}
+      params: &id009 {speed: high}
+- id: u_003
+  scope: universal
+  world: ''
+  targets: ['C:approach']
+  text: An old man crosses the robot's path from the right, just ahead of the robot.
+  oracle:
+    C: {profile: elder, route_fraction: 0.3, case: approach, angle: 90, after: continue}
+- id: u_004
+  scope: universal
+  world: ''
+  targets: ['A:busy', 'D:interaction_unbroken', 'C:approach']
+  text: It is visiting hours and the place is packed. Four people walk in from different
+    rooms, meet halfway along the robot's route and talk forever. A visitor walks
+    straight at the robot just ahead of the robot and keeps going.
+  oracle:
+    A: {case: busy}
+    D:
+      case: interaction_unbroken
+      variant: meet
+      members: &id002 [adult, adult, adult, adult]
+      place: {route_fraction: 0.5}
+    C: {profile: adult, route_fraction: 0.3, case: approach, angle: 180, after: continue}
+- id: u_005
+  scope: universal
+  world: ''
+  targets: ['D:stubborn', 'C:approach']
+  text: An absent-minded man walks towards the robot right in the robot's way, wants
+    to keep going and refuses to give way. A visitor walks up to the robot just ahead
+    of the robot, stops right in front of it and stares at it for a few seconds.
+  oracle:
+    D: {case: stubborn, profile: distracted, route_fraction: 0.5}
+    C: {profile: adult, route_fraction: 0.3, case: approach, angle: 180, after: stop_facing,
+      duration: 6}
+- id: u_006
+  scope: universal
+  world: ''
+  targets: ['D:stubborn', 'B:intrinsic']
+  text: A doctor walks towards the robot halfway along the robot's route, wants to
+    keep going and refuses to give way. Half the people here are rushing.
+  oracle:
+    D: {case: stubborn, profile: doctor, route_fraction: 0.5}
+    B: *id001
+- id: u_007
+  scope: universal
+  world: ''
+  targets: ['A:stampede', 'D:interaction_unbroken']
+  text: The break is over and the whole crowd rushes back to work all at once, pushing
+    through, as soon as the robot sets off. Four people walk in from different rooms,
+    meet just ahead of the robot and talk forever.
+  oracle:
+    A: {case: stampede}
+    D:
+      case: interaction_unbroken
+      variant: meet
+      members: *id002
+      place: {route_fraction: 0.3}
+- id: u_008
+  scope: universal
+  world: ''
+  targets: ['B:intrinsic']
+  text: The elderly people are slow to react and do not get out of the way, once the
+    robot is halfway.
+  oracle:
+    B:
+      case: intrinsic
+      select: &id003 {profile: elder}
+      params: &id004 {reaction: high, repulsion: low}
+      when: {route_fraction: 0.5}
+- id: u_009
+  scope: universal
+  world: ''
+  targets: ['C:blocking']
+  text: A nurse shuffles along slowly further down the robot's route, right in front
+    of the robot.
+  oracle:
+    C: {profile: nurse, route_fraction: 0.7, case: blocking, mode: lead}
+- id: u_010
+  scope: universal
+  world: ''
+  targets: ['D:stubborn', 'B:intrinsic', 'C:approach']
+  text: A doctor walks towards the robot further down the robot's route, wants to
+    keep going and refuses to give way. The elderly people are slow to react and do
+    not get out of the way, twenty seconds in. An absent-minded man crosses the robot's
+    path from the right, right in the robot's way.
+  oracle:
+    D: {case: stubborn, profile: doctor, route_fraction: 0.7}
+    B:
+      case: intrinsic
+      select: *id003
+      params: *id004
+      when: &id011 {at: 20}
+    C: {profile: distracted, route_fraction: 0.5, case: approach, angle: 90, after: continue}
+- id: u_011
+  scope: universal
+  world: ''
+  targets: ['D:interaction_unbroken']
+  text: Two nurses walk in from different rooms, meet right in the robot's way and
+    talk forever.
+  oracle:
+    D:
+      case: interaction_unbroken
+      variant: meet
+      members: &id013 [nurse, nurse]
+      place: {route_fraction: 0.5}
+- id: u_012
+  scope: universal
+  world: ''
+  targets: ['A:busy', 'D:formation_break', 'B:erratic_route']
+  text: The floor is busy today, twice as many people as usual. A doctor and two visitors
+    stand in a circle right in the robot's way; they scatter after half a minute.
+    A few people keep changing their minds about where they are going, from the start.
+  oracle:
+    A: {case: busy}
+    D:
+      case: formation_break
+      variant: circle
+      break: scatter
+      members: &id006 [doctor, adult, adult]
+      place: {route_fraction: 0.5}
+      when: &id012 {at: 30}
+    B:
+      case: erratic_route
+      select: &id007 {n: 3}
+      when: *id005
+- id: u_013
+  scope: universal
+  world: ''
+  targets: ['D:formation_break', 'B:erratic_route', 'C:approach']
+  text: A doctor and two visitors stand in a circle further down the robot's route;
+    they scatter when the robot comes within a few metres. A few people keep changing
+    their minds about where they are going, after a while. An absent-minded man walks
+    up to the robot right in the robot's way, stops right in front of it and stares
+    at it for a while.
+  oracle:
+    D:
+      case: formation_break
+      variant: circle
+      break: scatter
+      members: *id006
+      place: {route_fraction: 0.7}
+      when: &id019 {robot_within: 4.0}
+    B:
+      case: erratic_route
+      select: *id007
+      when: &id018 {at: 10}
+    C: {profile: distracted, route_fraction: 0.5, case: approach, angle: 180, after: stop_facing,
+      duration: 12}
+- id: u_014
+  scope: universal
+  world: ''
+  targets: ['C:approach']
+  text: A doctor crosses the robot's path from the right, halfway along the robot's
+    route.
+  oracle:
+    C: {profile: doctor, route_fraction: 0.5, case: approach, angle: 90, after: continue}
+- id: u_015
+  scope: universal
+  world: ''
+  targets: ['A:stampede']
+  text: 'A shift change: everyone surges back to their posts, nobody yields, twenty
+    seconds in.'
+  oracle:
+    A: {case: stampede}
+- id: u_016
+  scope: universal
+  world: ''
+  targets: ['B:intrinsic']
+  text: Half the people here are rushing, from the start.
+  oracle:
+    B:
+      case: intrinsic
+      select: *id008
+      params: *id009
+      when: *id005
+- id: u_017
+  scope: universal
+  world: ''
+  targets: ['D:interaction_unbroken', 'B:erratic_route', 'C:blocking']
+  text: Three colleagues stand side by side across the corridor halfway along the
+    robot's route, chatting, and do not move aside. A few people keep changing their
+    minds about where they are going, twenty seconds in. An absent-minded man stands
+    still further down the robot's route, blocking it for a few seconds.
+  oracle:
+    D:
+      case: interaction_unbroken
+      variant: blocking
+      members: *id010
+      place: {route_fraction: 0.5}
+    B:
+      case: erratic_route
+      select: *id007
+      when: *id011
+    C: {profile: distracted, route_fraction: 0.7, case: blocking, mode: stand, duration: 6}
+- id: u_018
+  scope: universal
+  world: ''
+  targets: ['A:evacuation', 'D:formation_break', 'B:intrinsic', 'C:approach']
+  text: An evacuation is called; everybody makes for the exit. A doctor and two visitors
+    stand in a circle halfway along the robot's route; they scatter after a while.
+    Half of the people here are visually impaired and cannot see the robot until it
+    is close. A doctor walks up to the robot just ahead of the robot and then follows
+    it around for a while.
+  oracle:
+    A: {case: evacuation}
+    D:
+      case: formation_break
+      variant: circle
+      break: scatter
+      members: *id006
+      place: {route_fraction: 0.5}
+      when: {at: 10}
+    B:
+      case: intrinsic
+      select: {amount: half}
+      params: {vision_range: low, vision_fov: low}
+    C: {profile: doctor, route_fraction: 0.3, case: approach, angle: 180, after: follow,
+      duration: 12}
+- id: u_019
+  scope: universal
+  world: ''
+  targets: ['D:formation_break']
+  text: Four people stand in a circle just ahead of the robot; they scatter after
+    half a minute.
+  oracle:
+    D:
+      case: formation_break
+      variant: circle
+      break: scatter
+      members: *id002
+      place: {route_fraction: 0.3}
+      when: *id012
+- id: u_020
+  scope: universal
+  world: ''
+  targets: ['A:busy', 'D:interaction_unbroken', 'C:approach']
+  text: The floor is busy today, twice as many people as usual. Two nurses stand side
+    by side across the corridor just ahead of the robot, chatting, and do not move
+    aside. A child walks up to the robot right in the robot's way and then follows
+    it around for a moment.
+  oracle:
+    A: {case: busy}
+    D:
+      case: interaction_unbroken
+      variant: blocking
+      members: *id013
+      place: {route_fraction: 0.3}
+    C: {profile: child, route_fraction: 0.5, case: approach, angle: 180, after: follow,
+      duration: 4}
+- id: u_021
+  scope: universal
+  world: ''
+  targets: ['B:erratic_route']
+  text: Some people wander about with no settled destination, after half a minute.
+  oracle:
+    B:
+      case: erratic_route
+      select: &id017 {amount: half}
+      when: &id016 {at: 30}
+- id: u_022
+  scope: universal
+  world: ''
+  targets: ['A:evacuation', 'D:interaction_unbroken', 'C:approach']
+  text: An evacuation is called; everybody makes for the exit. Four people stand side
+    by side across the corridor right in the robot's way, chatting, and do not move
+    aside. A nurse walks straight at the robot just ahead of the robot and keeps going.
+  oracle:
+    A: {case: evacuation}
+    D:
+      case: interaction_unbroken
+      variant: blocking
+      members: *id002
+      place: {route_fraction: 0.5}
+    C: {profile: nurse, route_fraction: 0.3, case: approach, angle: 180, after: continue}
+- id: u_023
+  scope: universal
+  world: ''
+  targets: ['A:stampede', 'D:formation_break']
+  text: The break is over and the whole crowd rushes back to work all at once, pushing
+    through, twenty seconds in. Two nurses are queuing further down the robot's route
+    and the queue breaks up as the robot arrives, everyone walking off.
+  oracle:
+    A: {case: stampede}
+    D:
+      case: formation_break
+      variant: line
+      break: disperse
+      members: *id013
+      place: {route_fraction: 0.7}
+      when: {robot_within: 3.0}
+- id: u_024
+  scope: universal
+  world: ''
+  targets: ['A:busy', 'D:interaction_unbroken', 'B:intrinsic']
+  text: It is visiting hours and the place is packed. Two nurses walk in from different
+    rooms, meet further down the robot's route and talk forever. Nobody is looking
+    where they are walking, after half a minute.
+  oracle:
+    A: {case: busy}
+    D:
+      case: interaction_unbroken
+      variant: meet
+      members: *id013
+      place: {route_fraction: 0.7}
+    B:
+      case: intrinsic
+      select: *id014
+      params: *id015
+      when: *id016
+- id: u_025
+  scope: universal
+  world: ''
+  targets: ['D:interaction_unbroken', 'B:erratic_route', 'C:approach']
+  text: A doctor and two visitors stand side by side across the corridor further down
+    the robot's route, chatting, and do not move aside. Some people wander about with
+    no settled destination, twenty seconds in. A visitor crosses the robot's path
+    from the right, right in the robot's way.
+  oracle:
+    D:
+      case: interaction_unbroken
+      variant: blocking
+      members: *id006
+      place: {route_fraction: 0.7}
+    B:
+      case: erratic_route
+      select: *id017
+      when: *id011
+    C: {profile: adult, route_fraction: 0.5, case: approach, angle: 90, after: continue}
+- id: u_026
+  scope: universal
+  world: ''
+  targets: ['D:formation_break', 'B:intrinsic']
+  text: Three colleagues stand in a circle right in the robot's way; they scatter
+    twenty seconds in. The elderly people are slow to react and do not get out of
+    the way, twenty seconds in.
+  oracle:
+    D:
+      case: formation_break
+      variant: circle
+      break: scatter
+      members: *id010
+      place: {route_fraction: 0.5}
+      when: {at: 20}
+    B:
+      case: intrinsic
+      select: *id003
+      params: *id004
+      when: *id011
+- id: u_027
+  scope: universal
+  world: ''
+  targets: ['A:stampede', 'D:formation_break', 'C:blocking']
+  text: The break is over and the whole crowd rushes back to work all at once, pushing
+    through, after half a minute. Four people stand in a circle further down the robot's
+    route; they scatter once the robot is halfway. A visitor shuffles along slowly
+    halfway along the robot's route, right in front of the robot.
+  oracle:
+    A: {case: stampede}
+    D:
+      case: formation_break
+      variant: circle
+      break: scatter
+      members: *id002
+      place: {route_fraction: 0.7}
+      when: {route_fraction: 0.5}
+    C: {profile: adult, route_fraction: 0.5, case: blocking, mode: lead}
+- id: u_028
+  scope: universal
+  world: ''
+  targets: ['B:intrinsic']
+  text: Nobody is looking where they are walking, after half a minute.
+  oracle:
+    B:
+      case: intrinsic
+      select: *id014
+      params: *id015
+      when: *id016
+- id: u_029
+  scope: universal
+  world: ''
+  targets: ['D:interaction_unbroken']
+  text: A doctor and two visitors stand side by side across the corridor further down
+    the robot's route, chatting, and do not move aside.
+  oracle:
+    D:
+      case: interaction_unbroken
+      variant: blocking
+      members: *id006
+      place: {route_fraction: 0.7}
+- id: u_030
+  scope: universal
+  world: ''
+  targets: ['C:approach']
+  text: An absent-minded man crosses the robot's path from the right, halfway along
+    the robot's route.
+  oracle:
+    C: {profile: distracted, route_fraction: 0.5, case: approach, angle: 90, after: continue}
+- id: u_031
+  scope: universal
+  world: ''
+  targets: ['D:interaction_unbroken', 'B:intrinsic']
+  text: Three colleagues stand talking halfway along the robot's route and will not
+    stop. Half the people here are rushing, twenty seconds in.
+  oracle:
+    D:
+      case: interaction_unbroken
+      variant: standing
+      members: *id010
+      place: {route_fraction: 0.5}
+    B:
+      case: intrinsic
+      select: *id008
+      params: *id009
+      when: *id011
+- id: u_032
+  scope: universal
+  world: ''
+  targets: ['C:approach']
+  text: An absent-minded man crosses the robot's path from the right, just ahead of
+    the robot.
+  oracle:
+    C: {profile: distracted, route_fraction: 0.3, case: approach, angle: 90, after: continue}
+- id: u_033
+  scope: universal
+  world: ''
+  targets: ['A:blackout', 'B:intrinsic']
+  text: The lights go out and everyone slows down, feeling their way. Nobody is looking
+    where they are walking, after a while.
+  oracle:
+    A: {case: blackout}
+    B:
+      case: intrinsic
+      select: *id014
+      params: *id015
+      when: *id018
+- id: u_034
+  scope: universal
+  world: ''
+  targets: ['B:intrinsic', 'C:blocking']
+  text: The elderly people are slow to react and do not get out of the way. A nurse
+    stands still halfway along the robot's route, blocking it for a good half minute.
+  oracle:
+    B:
+      case: intrinsic
+      select: *id003
+      params: *id004
+    C: {profile: nurse, route_fraction: 0.5, case: blocking, mode: stand, duration: 30}
+- id: u_035
+  scope: universal
+  world: ''
+  targets: ['D:interaction_unbroken']
+  text: Two nurses stand side by side across the corridor just ahead of the robot,
+    chatting, and do not move aside.
+  oracle:
+    D:
+      case: interaction_unbroken
+      variant: blocking
+      members: *id013
+      place: {route_fraction: 0.3}
+- id: u_036
+  scope: universal
+  world: ''
+  targets: ['C:blocking']
+  text: A child stands still further down the robot's route, blocking it for a while.
+  oracle:
+    C: {profile: child, route_fraction: 0.7, case: blocking, mode: stand, duration: 12}
+- id: u_037
+  scope: universal
+  world: ''
+  targets: ['D:interaction_unbroken']
+  text: Three colleagues walk in from different rooms, meet further down the robot's
+    route and talk forever.
+  oracle:
+    D:
+      case: interaction_unbroken
+      variant: meet
+      members: *id010
+      place: {route_fraction: 0.7}
+- id: u_038
+  scope: universal
+  world: ''
+  targets: ['A:evacuation', 'B:intrinsic', 'C:approach']
+  text: An evacuation is called; everybody makes for the exit. Half the people here
+    are rushing, after a while. A nurse crosses the robot's path from the right, halfway
+    along the robot's route.
+  oracle:
+    A: {case: evacuation}
+    B:
+      case: intrinsic
+      select: *id008
+      params: *id009
+      when: *id018
+    C: {profile: nurse, route_fraction: 0.5, case: approach, angle: 90, after: continue}
+- id: u_039
+  scope: universal
+  world: ''
+  targets: ['B:intrinsic', 'C:approach']
+  text: Half the people here are rushing, twenty seconds in. An absent-minded man
+    walks up to the robot right in the robot's way and then follows it around for
+    a while.
+  oracle:
+    B:
+      case: intrinsic
+      select: *id008
+      params: *id009
+      when: *id011
+    C: {profile: distracted, route_fraction: 0.5, case: approach, angle: 180, after: follow,
+      duration: 12}
+- id: u_040
+  scope: universal
+  world: ''
+  targets: ['A:busy', 'D:formation_break']
+  text: It is visiting hours and the place is packed. Three colleagues stand in a
+    circle right in the robot's way; they scatter when the robot comes within a few
+    metres.
+  oracle:
+    A: {case: busy}
+    D:
+      case: formation_break
+      variant: circle
+      break: scatter
+      members: *id010
+      place: {route_fraction: 0.5}
+      when: *id019

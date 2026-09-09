@@ -16,7 +16,11 @@ import hashlib
 import os
 
 #: Same environment variable `prompt_utils` reads, so one setting steers both paths.
-DEFAULT_MODEL = os.environ.get("ARENA_PROMPT_LLM", "gemini-3.5-flash")
+# 2026-08-31: 3.7-flash costs the same per token as 3.6 ($0.75/$3.75 per Mtok introductory) but
+# thinks the least (306 vs 433/577 tokens on the probe call) and answers fastest - the cheapest
+# per call. Prices live in data/promptgen/pricing.yaml. A model change starts a fresh cache
+# keyspace: 3.5-era answers stay valid only for explicit --model gemini-3.5-flash regenerations.
+DEFAULT_MODEL = os.environ.get("ARENA_PROMPT_LLM", "gemini-3.7-flash")
 
 
 class Unavailable(RuntimeError):
@@ -65,6 +69,14 @@ def _client() -> object:
 #: "Cannot send a request, as the client has been closed."
 _CLIENT: object | None = None
 
+#: Milliseconds before a hung HTTP call is abandoned (one fresh-client retry follows).
+TIMEOUT_MS = 120_000
+
+
+#: Token counts of the last successful `ask`, for the caller to record - thinking tokens are
+#: billed but invisible in the answer text, so a cache without them cannot reconstruct cost.
+LAST_USAGE: dict | None = None
+
 
 def ask(system: str, user: str, *, model: str | None = None, temperature: float = 0.0) -> str:
     """One completion, as raw text. Raises `Unavailable` rather than returning a guess.
@@ -75,20 +87,36 @@ def ask(system: str, user: str, *, model: str | None = None, temperature: float 
     """
     global _CLIENT  # noqa: PLW0603 - one client per process is the point
     genai = _client()
-    if _CLIENT is None:
-        _CLIENT = genai.Client()
-    try:
-        response = _CLIENT.models.generate_content(
-            model=model or DEFAULT_MODEL,
-            contents=[user],
-            config=genai.types.GenerateContentConfig(
-                system_instruction=system,
-                temperature=temperature,
-            ),
-        )
-    except Exception as exc:  # noqa: BLE001 - the SDK raises many types; the caller needs one
-        raise Unavailable(f"the model call failed: {type(exc).__name__}: {exc}") from exc
+    response = None
+    for attempt in range(2):
+        if _CLIENT is None:
+            # A hard timeout, because no timeout at all left a probe wedged 26 minutes on a
+            # dropped connection (2026-08-31, Wi-Fi roam mid-call); generous for thinking calls.
+            _CLIENT = genai.Client(http_options=genai.types.HttpOptions(timeout=TIMEOUT_MS))
+        try:
+            response = _CLIENT.models.generate_content(
+                model=model or DEFAULT_MODEL,
+                contents=[user],
+                config=genai.types.GenerateContentConfig(
+                    system_instruction=system,
+                    temperature=temperature,
+                ),
+            )
+            break
+        except Exception as exc:  # noqa: BLE001 - the SDK raises many types; the caller needs one
+            _CLIENT = None  # a dead connection pool must not poison the next call
+            if attempt:
+                raise Unavailable(f"the model call failed: {type(exc).__name__}: {exc}") from exc
     text = getattr(response, "text", None)
+    global LAST_USAGE  # noqa: PLW0603 - side channel for the caller's cache; billing needs the counts
+    meta = getattr(response, "usage_metadata", None)
+    LAST_USAGE = {
+        "input_tokens": getattr(meta, "prompt_token_count", None),
+        "output_tokens": getattr(meta, "candidates_token_count", None),
+        "thoughts_tokens": getattr(meta, "thoughts_token_count", None),
+        "cached_tokens": getattr(meta, "cached_content_token_count", None),
+        "total_tokens": getattr(meta, "total_token_count", None),
+    } if meta is not None else None
     if not text:
         raise Unavailable("the model returned an empty response")
     return text.strip()

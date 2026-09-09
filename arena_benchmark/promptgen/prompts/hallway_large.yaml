@@ -1,0 +1,253 @@
+- id: hallway_large_001
+  scope: world
+  world: hallway_large
+  targets: ['A:evacuation', 'D:interaction_unbroken', 'C:approach']
+  text: An evacuation is called; everybody makes for the exit, twenty seconds in.
+    Two nurses stand talking in the bottom room 3 and will not stop. A nurse crosses
+    the robot's path from the right, just ahead of the robot.
+  oracle:
+    A: {case: evacuation}
+    D:
+      case: interaction_unbroken
+      variant: standing
+      members: &id001 [nurse, nurse]
+      place: {zone: bottom_room_3}
+    C: {profile: nurse, route_fraction: 0.3, case: approach, angle: 90, after: continue}
+- id: hallway_large_002
+  scope: world
+  world: hallway_large
+  targets: ['A:busy', 'D:stubborn', 'B:intrinsic', 'C:blocking']
+  text: It is visiting hours and the place is packed. A visitor walks towards the
+    robot halfway along the robot's route, wants to keep going and refuses to give
+    way. Half the people here are rushing, after half a minute. A doctor stands still
+    halfway along the robot's route, blocking it for a long time.
+  oracle:
+    A: {case: busy}
+    D: {case: stubborn, profile: adult, route_fraction: 0.5}
+    B:
+      case: intrinsic
+      select: &id004 {amount: half}
+      params: &id005 {speed: high}
+      when: &id003 {at: 30}
+    C: {profile: doctor, route_fraction: 0.5, case: blocking, mode: stand, duration: 30}
+- id: hallway_large_003
+  scope: world
+  world: hallway_large
+  targets: ['A:stampede', 'D:formation_break', 'B:erratic_route']
+  text: The break is over and the whole crowd rushes back to work all at once, pushing
+    through, after a while. Two nurses are queuing in the top room 0 and the queue
+    breaks up after a while, everyone walking off. Some people wander about with no
+    settled destination, twenty seconds in.
+  oracle:
+    A: {case: stampede}
+    D:
+      case: formation_break
+      variant: line
+      break: disperse
+      members: *id001
+      place: {zone: top_room_0}
+      when: {at: 10}
+    B:
+      case: erratic_route
+      select: &id002 {amount: half}
+      when: &id006 {at: 20}
+- id: hallway_large_004
+  scope: world
+  world: hallway_large
+  targets: ['A:blackout', 'D:interaction_unbroken', 'C:blocking']
+  text: The lights go out and everyone slows down, feeling their way, after half a
+    minute. A doctor and two visitors stand talking in the bottom room 2 and will
+    not stop. A nurse shuffles along slowly halfway along the robot's route, right
+    in front of the robot.
+  oracle:
+    A: {case: blackout}
+    D:
+      case: interaction_unbroken
+      variant: standing
+      members: [doctor, adult, adult]
+      place: {zone: bottom_room_2}
+    C: {profile: nurse, route_fraction: 0.5, case: blocking, mode: lead}
+- id: hallway_large_005
+  scope: world
+  world: hallway_large
+  targets: ['D:stubborn', 'C:approach']
+  text: An old man walks towards the robot right in the robot's way, wants to keep
+    going and refuses to give way. A visitor crosses the robot's path from the right,
+    further down the robot's route.
+  oracle:
+    D: {case: stubborn, profile: elder, route_fraction: 0.5}
+    C: {profile: adult, route_fraction: 0.7, case: approach, angle: 90, after: continue}
+- id: hallway_large_006
+  scope: world
+  world: hallway_large
+  targets: ['D:formation_break', 'B:erratic_route']
+  text: Four people stand in a circle in the bottom room 4; they scatter after half
+    a minute. Some people wander about with no settled destination, after half a minute.
+  oracle:
+    D:
+      case: formation_break
+      variant: circle
+      break: scatter
+      members: [adult, adult, adult, adult]
+      place: {zone: bottom_room_4}
+      when: {at: 30}
+    B:
+      case: erratic_route
+      select: *id002
+      when: *id003
+- id: hallway_large_007
+  scope: world
+  world: hallway_large
+  targets: ['A:blackout', 'B:intrinsic']
+  text: The lights go out and everyone slows down, feeling their way. Half the people
+    here are rushing, twenty seconds in.
+  oracle:
+    A: {case: blackout}
+    B:
+      case: intrinsic
+      select: *id004
+      params: *id005
+      when: *id006
+- id: hallway_large_008
+  scope: world
+  world: hallway_large
+  targets: ['A:busy']
+  text: The floor is busy today, twice as many people as usual.
+  oracle:
+    A: {case: busy}
+- id: hallway_large_009
+  scope: world
+  world: hallway_large
+  targets: ['A:evacuation']
+  text: An evacuation is called; everybody makes for the exit.
+  oracle:
+    A: {case: evacuation}
+- id: hallway_large_010
+  scope: world
+  world: hallway_large
+  targets: ['A:stampede']
+  text: The break is over and the whole crowd rushes back to work all at once, pushing
+    through, after a while.
+  oracle:
+    A: {case: stampede}
+- id: hallway_large_011
+  scope: world
+  world: hallway_large
+  targets: ['A:stampede', 'C:approach']
+  text: 'A shift change: everyone surges back to their posts, nobody yields, once
+    the robot is halfway. A man in a hurry comes up fast from behind and overtakes
+    the robot halfway along the robot''s route.'
+  oracle:
+    A: {case: stampede}
+    C: {profile: hurried, route_fraction: 0.5, case: approach, angle: 0, speed: high,
+      after: continue}
+- id: hallway_large_012
+  scope: world
+  world: hallway_large
+  targets: ['A:evacuation', 'D:interaction_unbroken']
+  text: The fire alarm goes off and everyone heads for the exit, after a while. Two
+    nurses stand side by side across the corridor halfway along the robot's route,
+    chatting, and do not move aside.
+  oracle:
+    A: {case: evacuation}
+    D:
+      case: interaction_unbroken
+      variant: blocking
+      members: *id001
+      place: {route_fraction: 0.5}
+- id: hallway_large_013
+  scope: world
+  world: hallway_large
+  targets: ['A:busy', 'D:stubborn', 'B:erratic_route']
+  text: The floor is busy today, twice as many people as usual. A doctor walks towards
+    the robot halfway along the robot's route, wants to keep going and refuses to
+    give way. Some people wander about with no settled destination, after half a minute.
+  oracle:
+    A: {case: busy}
+    D: {case: stubborn, profile: doctor, route_fraction: 0.5}
+    B:
+      case: erratic_route
+      select: *id002
+      when: *id003
+- id: hallway_large_014
+  scope: world
+  world: hallway_large
+  targets: ['D:formation_break', 'C:blocking']
+  text: Two nurses are queuing in the top room 0 and the queue breaks up when the
+    robot is right there, everyone walking off. A man in a hurry stands still further
+    down the robot's route, blocking it for a good half minute.
+  oracle:
+    D:
+      case: formation_break
+      variant: line
+      break: disperse
+      members: *id001
+      place: {zone: top_room_0}
+      when: {robot_within: 1.5}
+    C: {profile: hurried, route_fraction: 0.7, case: blocking, mode: stand, duration: 30}
+- id: hallway_large_015
+  scope: world
+  world: hallway_large
+  targets: ['A:blackout']
+  text: The lights go out and everyone slows down, feeling their way, as soon as the
+    robot sets off.
+  oracle:
+    A: {case: blackout}
+- id: hallway_large_016
+  scope: world
+  world: hallway_large
+  targets: ['B:intrinsic']
+  text: Half of the people here are visually impaired and cannot see the robot until
+    it is close, from the start.
+  oracle:
+    B:
+      case: intrinsic
+      select: {amount: half}
+      params: {vision_range: low, vision_fov: low}
+      when: &id007 {at: 0}
+- id: hallway_large_017
+  scope: world
+  world: hallway_large
+  targets: ['A:stampede', 'C:approach']
+  text: The break is over and the whole crowd rushes back to work all at once, pushing
+    through, after a while. A visitor crosses the robot's path from the right, further
+    down the robot's route.
+  oracle:
+    A: {case: stampede}
+    C: {profile: adult, route_fraction: 0.7, case: approach, angle: 90, after: continue}
+- id: hallway_large_018
+  scope: world
+  world: hallway_large
+  targets: ['A:evacuation', 'B:intrinsic']
+  text: An evacuation is called; everybody makes for the exit, once the robot is halfway.
+    Nobody is looking where they are walking.
+  oracle:
+    A: {case: evacuation}
+    B:
+      case: intrinsic
+      select: {amount: all}
+      params: {vision_fov: low}
+- id: hallway_large_019
+  scope: world
+  world: hallway_large
+  targets: ['A:busy', 'D:stubborn', 'B:erratic_route', 'C:blocking']
+  text: It is visiting hours and the place is packed. A child walks towards the robot
+    halfway along the robot's route, wants to keep going and refuses to give way.
+    A few people keep changing their minds about where they are going, from the start.
+    A man in a hurry shuffles along slowly halfway along the robot's route, right
+    in front of the robot.
+  oracle:
+    A: {case: busy}
+    D: {case: stubborn, profile: child, route_fraction: 0.5}
+    B:
+      case: erratic_route
+      select: {n: 3}
+      when: *id007
+    C: {profile: hurried, route_fraction: 0.5, case: blocking, mode: lead}
+- id: hallway_large_020
+  scope: world
+  world: hallway_large
+  targets: ['A:blackout']
+  text: The lights go out and everyone slows down, feeling their way.
+  oracle:
+    A: {case: blackout}

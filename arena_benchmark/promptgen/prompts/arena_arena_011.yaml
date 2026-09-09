@@ -1,0 +1,243 @@
+- id: arena_arena_011_001
+  scope: world
+  world: arena_arena_011
+  targets: ['B:erratic_route']
+  text: A few people keep changing their minds about where they are going, after a
+    while.
+  oracle:
+    B:
+      case: erratic_route
+      select: &id003 {n: 3}
+      when: &id007 {at: 10}
+- id: arena_arena_011_002
+  scope: world
+  world: arena_arena_011
+  targets: ['D:formation_break', 'B:intrinsic']
+  text: Two nurses are queuing halfway along the robot's route and the queue breaks
+    up as the robot arrives, everyone walking off. The elderly people are slow to
+    react and do not get out of the way, after half a minute.
+  oracle:
+    D:
+      case: formation_break
+      variant: line
+      break: disperse
+      members: [nurse, nurse]
+      place: {route_fraction: 0.5}
+      when: &id004 {robot_within: 3.0}
+    B:
+      case: intrinsic
+      select: &id005 {profile: elder}
+      params: &id006 {reaction: high, repulsion: low}
+      when: &id002 {at: 30}
+- id: arena_arena_011_003
+  scope: world
+  world: arena_arena_011
+  targets: ['A:stampede']
+  text: The break is over and the whole crowd rushes back to work all at once, pushing
+    through, after a while.
+  oracle:
+    A: {case: stampede}
+- id: arena_arena_011_004
+  scope: world
+  world: arena_arena_011
+  targets: ['C:approach']
+  text: A visitor crosses the robot's path from the right, halfway along the robot's
+    route.
+  oracle:
+    C: {profile: adult, route_fraction: 0.5, case: approach, angle: 90, after: continue}
+- id: arena_arena_011_005
+  scope: world
+  world: arena_arena_011
+  targets: ['D:interaction_unbroken', 'C:blocking']
+  text: A doctor and two visitors stand side by side across the corridor in the patient
+    room 2, chatting, and do not move aside. A visitor stands still just ahead of
+    the robot, blocking it for a moment.
+  oracle:
+    D:
+      case: interaction_unbroken
+      variant: blocking
+      members: &id001 [doctor, adult, adult]
+      place: {zone: patient_room_2}
+    C: {profile: adult, route_fraction: 0.3, case: blocking, mode: stand, duration: 4}
+- id: arena_arena_011_006
+  scope: world
+  world: arena_arena_011
+  targets: ['D:stubborn']
+  text: A child walks towards the robot halfway along the robot's route, wants to
+    keep going and refuses to give way.
+  oracle:
+    D: {case: stubborn, profile: child, route_fraction: 0.5}
+- id: arena_arena_011_007
+  scope: world
+  world: arena_arena_011
+  targets: ['A:blackout', 'D:interaction_unbroken', 'C:blocking']
+  text: A power cut leaves the whole floor in the dark, once the robot is halfway.
+    A doctor and two visitors walk in from different rooms, meet in the patient room
+    2 and talk forever. An absent-minded man stands still halfway along the robot's
+    route, blocking it for a good half minute.
+  oracle:
+    A: {case: blackout}
+    D:
+      case: interaction_unbroken
+      variant: meet
+      members: *id001
+      place: {zone: patient_room_2}
+    C: {profile: distracted, route_fraction: 0.5, case: blocking, mode: stand, duration: 30}
+- id: arena_arena_011_008
+  scope: world
+  world: arena_arena_011
+  targets: ['A:busy']
+  text: The floor is busy today, twice as many people as usual.
+  oracle:
+    A: {case: busy}
+- id: arena_arena_011_009
+  scope: world
+  world: arena_arena_011
+  targets: ['A:evacuation']
+  text: An evacuation is called; everybody makes for the exit.
+  oracle:
+    A: {case: evacuation}
+- id: arena_arena_011_010
+  scope: world
+  world: arena_arena_011
+  targets: ['D:stubborn']
+  text: A nurse walks towards the robot just ahead of the robot, wants to keep going
+    and refuses to give way.
+  oracle:
+    D: {case: stubborn, profile: nurse, route_fraction: 0.3}
+- id: arena_arena_011_011
+  scope: world
+  world: arena_arena_011
+  targets: ['B:intrinsic']
+  text: Nobody is looking where they are walking, after half a minute.
+  oracle:
+    B:
+      case: intrinsic
+      select: {amount: all}
+      params: {vision_fov: low}
+      when: *id002
+- id: arena_arena_011_012
+  scope: world
+  world: arena_arena_011
+  targets: ['D:formation_break', 'C:approach']
+  text: A doctor and two visitors stand in a circle just ahead of the robot; they
+    scatter after half a minute. A doctor walks up to the robot halfway along the
+    robot's route and then follows it around for a few seconds.
+  oracle:
+    D:
+      case: formation_break
+      variant: circle
+      break: scatter
+      members: *id001
+      place: {route_fraction: 0.3}
+      when: {at: 30}
+    C: {profile: doctor, route_fraction: 0.5, case: approach, angle: 180, after: follow,
+      duration: 6}
+- id: arena_arena_011_013
+  scope: world
+  world: arena_arena_011
+  targets: ['A:blackout', 'B:erratic_route', 'C:blocking']
+  text: The lights go out and everyone slows down, feeling their way, as soon as the
+    robot sets off. A few people keep changing their minds about where they are going,
+    after half a minute. An old man shuffles along slowly halfway along the robot's
+    route, right in front of the robot.
+  oracle:
+    A: {case: blackout}
+    B:
+      case: erratic_route
+      select: *id003
+      when: {at: 30}
+    C: {profile: elder, route_fraction: 0.5, case: blocking, mode: lead}
+- id: arena_arena_011_014
+  scope: world
+  world: arena_arena_011
+  targets: ['A:busy', 'B:erratic_route']
+  text: The floor is busy today, twice as many people as usual. Some people wander
+    about with no settled destination, after half a minute.
+  oracle:
+    A: {case: busy}
+    B:
+      case: erratic_route
+      select: {amount: half}
+      when: *id002
+- id: arena_arena_011_015
+  scope: world
+  world: arena_arena_011
+  targets: ['A:evacuation', 'D:stubborn']
+  text: The fire alarm goes off and everyone heads for the exit, after half a minute.
+    A man in a hurry walks towards the robot right in the robot's way, wants to keep
+    going and refuses to give way.
+  oracle:
+    A: {case: evacuation}
+    D: {case: stubborn, profile: hurried, route_fraction: 0.5}
+- id: arena_arena_011_016
+  scope: world
+  world: arena_arena_011
+  targets: ['A:stampede', 'D:interaction_unbroken', 'B:intrinsic', 'C:approach']
+  text: 'A shift change: everyone surges back to their posts, nobody yields, after
+    half a minute. Three colleagues walk in from different rooms, meet further down
+    the robot''s route and talk forever. Half the people here are rushing. A child
+    crosses the robot''s path from the right, halfway along the robot''s route.'
+  oracle:
+    A: {case: stampede}
+    D:
+      case: interaction_unbroken
+      variant: meet
+      members: [adult, adult, adult]
+      place: {route_fraction: 0.7}
+    B:
+      case: intrinsic
+      select: {amount: half}
+      params: {speed: high}
+    C: {profile: child, route_fraction: 0.5, case: approach, angle: 90, after: continue}
+- id: arena_arena_011_017
+  scope: world
+  world: arena_arena_011
+  targets: ['D:formation_break']
+  text: A doctor and two visitors stand in a circle halfway along the robot's route;
+    they scatter as the robot arrives.
+  oracle:
+    D:
+      case: formation_break
+      variant: circle
+      break: scatter
+      members: *id001
+      place: {route_fraction: 0.5}
+      when: *id004
+- id: arena_arena_011_018
+  scope: world
+  world: arena_arena_011
+  targets: ['A:busy', 'D:stubborn', 'B:intrinsic', 'C:blocking']
+  text: The floor is busy today, twice as many people as usual. A man in a hurry walks
+    towards the robot halfway along the robot's route, wants to keep going and refuses
+    to give way. The elderly people are slow to react and do not get out of the way,
+    after a while. A child shuffles along slowly just ahead of the robot, right in
+    front of the robot.
+  oracle:
+    A: {case: busy}
+    D: {case: stubborn, profile: hurried, route_fraction: 0.5}
+    B:
+      case: intrinsic
+      select: *id005
+      params: *id006
+      when: *id007
+    C: {profile: child, route_fraction: 0.3, case: blocking, mode: lead}
+- id: arena_arena_011_019
+  scope: world
+  world: arena_arena_011
+  targets: ['A:stampede']
+  text: 'A shift change: everyone surges back to their posts, nobody yields, once
+    the robot is halfway.'
+  oracle:
+    A: {case: stampede}
+- id: arena_arena_011_020
+  scope: world
+  world: arena_arena_011
+  targets: ['A:blackout', 'C:approach']
+  text: A power cut leaves the whole floor in the dark, as soon as the robot sets
+    off. An old man comes up fast from behind and overtakes the robot just ahead of
+    the robot.
+  oracle:
+    A: {case: blackout}
+    C: {profile: elder, route_fraction: 0.3, case: approach, angle: 0, speed: high,
+      after: continue}

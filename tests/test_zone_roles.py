@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import pytest
 import yaml
-
 from arena_benchmark.propose import client
 from arena_benchmark.propose.zone_roles import (
     Proposal,

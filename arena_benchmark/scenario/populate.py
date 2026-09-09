@@ -1,7 +1,7 @@
-"""Generating the five base scenarios for a world.
+"""Generating the four base scenarios for a world.
 
-`normal`, `break`, `busy`, `night`, `empty` — the population states of
-`catalogue_plan.md` §1.1. All five are static: a population written into `scenario.yaml` at
+`normal`, `break`, `night`, `empty` — the population states of `new_plan_2.md` §1.2 (`busy`
+is a Type A case now, injected by `promptgen.step_a`). All four are static: a population written into `scenario.yaml` at
 authoring time, with no runtime machinery. `night`'s slower walking is a per-agent
 `desired_velocity`, which is what keeps it a base scenario rather than an edge case.
 
@@ -33,12 +33,15 @@ Three rules govern the population, and all three were learned by breaking them:
   working route. Deriving one from zone geometry would be a second, worse route planner.
 
 Walkers are not all `adult`. Each is drawn from a **mix of kinematic types** (`KINEMATICS`,
-`MIX`): the hurried, the distracted, the elderly, and - where the building is that kind of
-building - children, wheelchair users and cart pushers. Every one is `mode: simple`, walks its
+`MIX`): the hurried, the distracted, the elderly, and - in residential worlds - children.
+(Wheelchairs and carts were dropped 2026-08-31: Arena cannot embody them - the only pedestrian
+meshes are bipedal adults, so the wide slow body the type promises never meets the robot's
+sensors.) Every one is `mode: simple`, walks its
 rooms, and carries every Level A field, so the knobs land on all of them.
 
-A base scenario also carries `regions:` - one source and one sink - wherever the world affords a
-pair. See `regions.py` for why that is not decoration.
+A base scenario carries **no** `regions:` (sources/sinks): the population is exactly the cast
+written here, so every pedestrian on the floor is one a case can name, own and score. (Streams of
+anonymous `flow_*` agents used to be added for the knob-era Level B tail; removed 2026-08-28.)
 """
 
 from __future__ import annotations
@@ -56,10 +59,19 @@ from .zones import Role, zones_by_role
 #: structurally inert - measured, `blocking` aborted 14 times in a row before this existed.
 BT_AGENT_TYPE = "talker.yaml"
 
-#: How many behaviour-tree agents a populated base carries, and where: this many, all in one
-#: room. A conversation needs two people, and a talker with nobody in range waits out its
-#: patience and stands there anyway.
+#: Behaviour-tree agents come in pairs, one pair per room: a conversation needs two people, and
+#: a talker with nobody in range waits out its patience and stands there anyway. `TALKER_SHARE`
+#: of the cast (rounded down to whole pairs, at least one pair) talks; the rest walks. A cast
+#: too small for a pair plus two walkers has no talkers - a base where nobody walks is furniture.
 TALKERS = 2
+TALKER_SHARE = 0.3
+MIN_WALKERS = 2
+
+#: Dwellers per zone of the profile's role at the `normal` profile, before the world's crowd
+#: factor. Was 1 until 2026-08-28: seven people in a thirteen-room hospital read as empty.
+PEOPLE_PER_ZONE = 2
+#: Fewest people a populated base carries, whatever the world's size.
+MIN_CAST = 4
 
 #: Metres of clearance between a pedestrian's home zone and the robot's route polyline, for
 #: `zone_screen` to decide which zones may be homes. Nothing in this module measures it.
@@ -73,12 +85,6 @@ ROUTE_STOPS: tuple[tuple[int, float], ...] = ((1, 0.34), (2, 0.30), (3, 0.22), (
 #: of walking there and back at a nominal 1 m/s. `stops` is a floor; `_route` keeps adding zones
 #: until the route is at least this long or the world runs out of zones to add.
 MIN_PED_ROUTE_M = 15.0
-
-#: How the `clustered` cast packs its walkers: into this many home zones, the ones nearest the
-#: robot's route. `stream_led` keeps this share of the nominal cast and hands the rest to the
-#: flow (see `regions.STREAM_LED_INTENSITY`).
-CLUSTER_ZONES = 2
-STREAM_LED_CAST = 0.5
 
 #: The kinematic (`mode: simple`) pedestrian types a walker may be, with each type's
 #: `desired_velocity` distribution as (mean, std, clip_low, clip_high) - mirrored from
@@ -95,26 +101,35 @@ KINEMATICS: dict[str, tuple[float, float, float, float]] = {
     "child":      (1.0, 0.25, 0.4, 1.8),
     "hurried":    (1.7, 0.15, 1.3, 2.2),
     "distracted": (0.95, 0.12, 0.5, 1.3),
-    "wheelchair": (0.8, 0.15, 0.4, 1.2),
-    "cart":       (0.9, 0.1, 0.5, 1.2),
 }
 
 #: Who is about, per profile: relative weights over `KINEMATICS`. A type a building has no
 #: business hosting (`ONLY_IN`) is dropped before drawing, and its weight goes to the rest.
 MIX: dict[str, dict[str, int]] = {
-    "normal": {"adult": 55, "hurried": 15, "distracted": 15, "elder": 10, "child": 5, "wheelchair": 5},
+    "normal": {"adult": 55, "hurried": 15, "distracted": 15, "elder": 10, "child": 5},
     "break":  {"adult": 50, "distracted": 30, "elder": 10, "child": 10},
-    "busy":   {"adult": 45, "hurried": 30, "distracted": 15, "cart": 5, "elder": 5},
-    "night":  {"adult": 40, "elder": 20, "cart": 20, "distracted": 10, "hurried": 10},
+    "night":  {"adult": 50, "elder": 30, "distracted": 10, "hurried": 10},
 }
 
-#: Types that only appear in a kind of building. A gurney in a flat and a child on a ward are
-#: the sort of thing a reviewer flags before anything else.
+#: Who arrives when a building gets `busy` - the Type A case, not a base profile any more.
+BUSY_MIX: dict[str, int] = {"adult": 50, "hurried": 30, "distracted": 15, "elder": 5}
+
+#: Types that only appear in a kind of building. A child on a hospital ward is the sort of
+#: thing a reviewer flags before anything else.
 ONLY_IN: dict[str, tuple[str, ...]] = {
     "child": ("residential",),
-    "wheelchair": ("hospital",),
-    "cart": ("hospital",),
 }
+
+#: Zone-name fragments of rooms nobody is placed in or sent to: sanitary rooms and cupboards.
+#: Measured 2026-08-28 on hospital_1: walkers spawned in `wc_waiting` never left - its 0.7 m
+#: stall doors are sealed in HumanSim's inflated grid - and six of eleven walkers stood still.
+NOT_FOR_PEOPLE = ("wc", "toilet", "bath", "restroom", "lavatory", "stall", "storage", "closet", "elevator")
+
+
+def for_people(names: Sequence[str]) -> list[str]:
+    """`names` minus the rooms nobody is placed in or sent to (`NOT_FOR_PEOPLE`)."""
+    return [n for n in names if not any(h in str(n).lower() for h in NOT_FOR_PEOPLE)]
+
 
 #: Zone-name fragments that make a building a hospital for the purpose of the mix.
 _HOSPITAL_HINTS = ("patient", "nurse", "ward", "exam", "pharmacy", "operating", "triage", "consult")
@@ -128,7 +143,6 @@ CROWD_RANGE = (0.8, 1.3)
 PROFILES: dict[str, dict[str, float]] = {
     "normal": {"count": 1.0, "speed": 1.0},
     "break":  {"count": 1.0, "speed": 1.0},
-    "busy":   {"count": 2.0, "speed": 1.0},
     "night":  {"count": 0.5, "speed": 0.8},
     "empty":  {"count": 0.0, "speed": 1.0},
 }
@@ -137,10 +151,14 @@ PROFILES: dict[str, dict[str, float]] = {
 TARGET_ROLE: dict[str, Role] = {
     "normal": Role.WORK,
     "break": Role.BREAK,
-    "busy": Role.WORK,
     "night": Role.WORK,
     "empty": Role.WORK,
 }
+
+#: HumanSim's default `max_velocity` distribution mean (`config/agent_types`), and the headroom a
+#: faster walker gets over its own desired speed.
+MAX_VELOCITY_DEFAULT = 1.5
+MAX_VELOCITY_HEADROOM = 0.3
 
 #: Meshes in shipped use. Shuffled per world so populations are not all led by the same mesh -
 #: an unresolved model logs a warning and silently falls back to a default.
@@ -222,8 +240,19 @@ def clearance(pt: tuple[float, float], route: Sequence[tuple[float, float]]) -> 
 
 
 def nominal_count(zones_of_role: Sequence[str]) -> int:
-    """The world's nominal population: one dweller per zone of the target role, at least one."""
-    return max(1, len(zones_of_role))
+    """The world's nominal population: `PEOPLE_PER_ZONE` per zone of the target role."""
+    return max(1, PEOPLE_PER_ZONE * len(zones_of_role))
+
+
+def cast_split(n: int) -> tuple[int, int]:
+    """(talkers, walkers) for a cast of `n`: `TALKER_SHARE` in whole pairs - at least one pair
+    - never leaving fewer than `MIN_WALKERS` walkers; no pair at all only when the cast is too
+    small for a pair and two walkers."""
+    pairs = max(1, int(n * TALKER_SHARE) // TALKERS)
+    while pairs > 0 and n - pairs * TALKERS < MIN_WALKERS:
+        pairs -= 1
+    talkers = pairs * TALKERS
+    return talkers, n - talkers
 
 
 def _targets(profile: str, by_role: dict[Role, list[str]]) -> tuple[list[str], str]:
@@ -308,11 +337,9 @@ def build(
     overrides: Mapping[str, str] | None = None,
     seed: int = 0,
     homes: frozenset[str] = frozenset(),
-    regions: Mapping[str, Any] | None = None,
     world: str = "",
-    cast: str = "dispersed",
 ) -> dict[str, Any]:
-    """One base scenario document, every pedestrian in rooms.
+    """One base scenario document, every pedestrian in rooms - one base per profile.
 
     Deterministic in its inputs - `world` among them, so two worlds at one seed are not one
     crowd - and free of coordinates: what varies between regenerations is who is where and where
@@ -342,24 +369,28 @@ def build(
     route = route_points(robot, zones)
     forbidden = robot_zones(robot)
 
-    # Where people start. The screened zones where the screen found any; otherwise the targets,
-    # minus the rooms the robot itself may resolve into.
-    starts = [z for z in targets if z in homes and z in centroids] or \
-        [z for z in targets if z not in forbidden and z in centroids] or \
+    # Where people start. The screened zones of the profile's role where the screen found any;
+    # when those are fewer than three rooms, every other screened, non-private room joins so
+    # the population is spread over the building rather than stacked in one or two rooms
+    # (hospital_1: only two of six work zones pass the screen). Otherwise the targets minus the
+    # rooms the robot itself may resolve into.
+    starts = for_people([z for z in targets if z in homes and z in centroids])
+    if len(starts) < 3 and homes:
+        starts += for_people([z for role in (Role.WORK, Role.BREAK, Role.TRANSIT, Role.UNKNOWN) for z in by_role[role]
+                              if z in homes and z in centroids and z not in starts and z not in forbidden])
+    starts = starts or \
+        for_people([z for z in targets if z not in forbidden and z in centroids]) or \
+        for_people([z for z in targets if z in centroids]) or \
         [z for z in targets if z in centroids]
     if not starts:
         return doc
-    if cast == "clustered" and len(starts) > CLUSTER_ZONES:
-        # The zones nearest the robot's route, so the knot is one the robot has to pass. Sorted
-        # by name inside a distance tie so the choice does not depend on world.yaml's order.
-        starts = sorted(starts, key=lambda z: (round(clearance(centroids[z], route), 2), z))[:CLUSTER_ZONES]
 
     # Where people walk to: every zone but the private ones, so a route crosses corridors and
     # rooms alike. The robot's own zones are fine as destinations - the agent arrives later.
-    destinations = [
+    destinations = for_people([
         z for role in (Role.WORK, Role.BREAK, Role.TRANSIT, Role.UNKNOWN)
         for z in by_role[role] if z in centroids
-    ]
+    ]) or [z for role in (Role.WORK, Role.BREAK, Role.TRANSIT, Role.UNKNOWN) for z in by_role[role] if z in centroids]
 
     rng = random.Random(f"{world}:{profile}:{seed}")
     world_rng = random.Random(f"{world}:{seed}")
@@ -368,11 +399,13 @@ def build(
     models = list(MODELS)
     world_rng.shuffle(models)
 
-    share = STREAM_LED_CAST if cast == "stream_led" else 1.0
-    n = max(1, round(nominal_count(targets) * spec["count"] * crowd * share))
-    # The talkers share the first home so they can find each other; a lone agent walks instead,
-    # since a conversation of one is a person standing in a doorway.
-    talkers = TALKERS if n >= TALKERS else 0
+    n = max(MIN_CAST, round(nominal_count(targets) * spec["count"] * crowd))
+    # Talkers come in pairs, one pair per room, so each pair can find each other; the walkers
+    # are guaranteed - a base where nobody walks is furniture.
+    talkers, _walkers = cast_split(n)
+    talker_rooms = list(starts)
+    rng_rooms = random.Random(f"{world}:{profile}:{seed}:talkers")
+    rng_rooms.shuffle(talker_rooms)
 
     kind_of_world = world_kind(zones, overrides)
     weights = mix_for(profile, kind_of_world)
@@ -383,7 +416,7 @@ def build(
         stops = rng.choices([s for s, _ in ROUTE_STOPS], weights=[w for _, w in ROUTE_STOPS])[0]
 
         if i < talkers:
-            home = starts[0]
+            home = talker_rooms[(i // TALKERS) % len(talker_rooms)]
             kind = f"./{BT_AGENT_TYPE}"
             speed = speed_for("adult", rng, spec["speed"] * tempo)
             # A talker's waypoints are its own room: the behaviour tree drives it, and the list
@@ -397,18 +430,29 @@ def build(
             legs = _route(home, destinations, i, stops, centroids)
             waypoints = [home, *legs] if legs else [home, home]
 
+        agent: dict[str, Any] = {"agent_type": kind, "desired_velocity": speed}
+        if speed > MAX_VELOCITY_DEFAULT:
+            # The engine clamps every step to the type's `max_velocity` (1.5 +- 0.1 by default),
+            # so a hurried 1.9 m/s would walk at 1.5; lift the cap with the speed.
+            agent["max_velocity"] = round(speed + MAX_VELOCITY_HEADROOM, 2)
         agents.append({
             "name": f"{profile}_{i + 1}",
             "model": models[i % len(models)],
             "pose": home,
-            "agent": {"agent_type": kind, "desired_velocity": speed},
+            "agent": agent,
             "waypoints": waypoints,
             "waypoint_mode": _waypoint_mode(len(waypoints), rng),
         })
 
+    # A profile-selecting Type B ("the elderly people...") must always have someone to tune:
+    # 25 realised scenarios were dropped to `matched nobody` before this guarantee. `elder` is
+    # the one profile every mix carries, so the last walker becomes one when the draw missed.
+    walkers = [a for a in agents if not str(a["agent"]["agent_type"]).startswith("./")]
+    if walkers and all(a["agent"]["agent_type"] != "elder" for a in walkers):
+        last = walkers[-1]
+        last["agent"] = {"agent_type": "elder", "desired_velocity": speed_for("elder", random.Random(f"{world}:{profile}:{seed}:elder"), spec["speed"] * tempo)}
+
     doc["dynamic"] = agents
-    if regions:
-        doc["regions"] = dict(regions)
     return doc
 
 
@@ -461,3 +505,69 @@ def speed_for(kind: str, rng: random.Random, scale: float = 1.0) -> float:
     mean, std, lo, hi = KINEMATICS[kind]
     raw = rng.gauss(mean, std) * scale
     return round(min(max(raw, lo), hi), 2)
+
+
+def extra_agents(
+    n: int,
+    *,
+    zones: Sequence[Mapping[str, Any]],
+    robot: Mapping[str, Any],
+    homes: frozenset[str] = frozenset(),
+    seed: int = 0,
+    world: str = "",
+    mix: Mapping[str, int] = BUSY_MIX,
+    prefix: str = "busy",
+    speed_scale: float = 1.0,
+    overrides: Mapping[str, str] | None = None,
+    existing: Mapping[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    """`n` more walkers for a scenario that already has a population: the `busy` injection.
+
+    Same placement rules as `build` - homes off the robot's route, routes through other rooms,
+    types drawn from `mix` - and deterministic in its inputs. Names continue from `prefix_1`,
+    skipping any the scenario already uses.
+    """
+    by_role = zones_by_role(zones, overrides)
+    targets, _basis = _targets("normal", by_role)
+    centroids = {
+        str(z["name"]): _centroid(_polygon(z))
+        for z in zones if isinstance(z, Mapping) and z.get("name") and len(_polygon(z)) >= 3
+    }
+    forbidden = robot_zones(robot)
+    starts = for_people([z for z in targets if z in homes and z in centroids]) or \
+        [z for z in targets if z not in forbidden and z in centroids] or \
+        [z for z in targets if z in centroids]
+    if not starts or n <= 0:
+        return []
+    destinations = for_people([
+        z for role in (Role.WORK, Role.BREAK, Role.TRANSIT, Role.UNKNOWN)
+        for z in by_role[role] if z in centroids
+    ])
+    rng = random.Random(f"{world}:{prefix}:{seed}")
+    models = list(MODELS)
+    rng.shuffle(models)
+    weights = mix_for("normal", world_kind(zones, overrides)) if not mix else {t: w for t, w in mix.items() if world_kind(zones, overrides) in ONLY_IN.get(t, (world_kind(zones, overrides),))}
+    weights = weights or {"adult": 1}
+    types, type_weights = list(weights), list(weights.values())
+    taken = {str(a.get("name")) for a in ((existing or {}).get("dynamic") or []) if isinstance(a, Mapping)}
+    agents: list[dict[str, Any]] = []
+    i = 0
+    while len(agents) < n:
+        i += 1
+        name = f"{prefix}_{i}"
+        if name in taken:
+            continue
+        stops = rng.choices([s for s, _ in ROUTE_STOPS], weights=[w for _, w in ROUTE_STOPS])[0]
+        home = starts[i % len(starts)]
+        kind = rng.choices(types, weights=type_weights)[0]
+        legs = _route(home, destinations, i, stops, centroids)
+        waypoints = [home, *legs] if legs else [home, home]
+        agents.append({
+            "name": name,
+            "model": models[i % len(models)],
+            "pose": home,
+            "agent": {"agent_type": kind, "desired_velocity": speed_for(kind, rng, speed_scale)},
+            "waypoints": waypoints,
+            "waypoint_mode": _waypoint_mode(len(waypoints), rng),
+        })
+    return agents

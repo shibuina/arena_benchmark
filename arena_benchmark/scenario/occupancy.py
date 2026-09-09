@@ -16,6 +16,7 @@ module reads it directly rather than going through ROS, so scenario generation s
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -100,21 +101,108 @@ class Occupancy:
 DEFAULT_FOOTPRINT = 0.4
 
 
-def asset_footprint(model: str, assets_root: Path) -> float:
-    """Circumscribing radius of a model's footprint, from its `annotation.yaml`.
+def asset_annotation(model: str, assets_root: Path) -> dict[str, Any] | None:
+    """A model's `annotation.yaml`, resolved the way the runtime resolves the model: the
+    world names `Hospital/SM_ReceptionDesk_01a`, the asset lives under
+    `Hospital/Object/SM_ReceptionDesk_01a`. None when there is no annotation to be found."""
+    parts = [p for p in model.split("/") if p]
+    if not parts:
+        return None
+    candidates = [assets_root.joinpath(*parts) / "annotation.yaml"]
+    if len(parts) == 2:
+        candidates.append(assets_root / parts[0] / "Object" / parts[1] / "annotation.yaml")
+    candidates.extend(sorted(assets_root.glob(f"*/*/{parts[-1]}/annotation.yaml")))
+    for ann in candidates:
+        if ann.is_file():
+            try:
+                doc = yaml.safe_load(ann.read_text()) or {}
+            except Exception:
+                return None
+            return doc if isinstance(doc, dict) else None
+    return None
 
-    `bounding_box` is `[[x_lo, x_hi], [y_lo, y_hi], [z_lo, z_hi]]`. A circle around the x-y
-    extent is a conservative stand-in for a rotated rectangle: it over-blocks the corners
-    slightly, which is the right direction to be wrong when the alternative is a pedestrian
-    standing inside a desk.
-    """
-    ann = assets_root / model / "annotation.yaml"
+
+Box = tuple[float, float, float, float]
+
+
+def asset_box(model: str, assets_root: Path) -> Box | None:
+    """The model-frame x-y bounding box `(x_lo, x_hi, y_lo, y_hi)` from the annotation's
+    `bounding_box` (`[[x_lo, x_hi], [y_lo, y_hi], [z_lo, z_hi]]`), or None. The box is *not*
+    centred on the model's origin as a rule - the reception desk's runs 0..2.42 m in x."""
+    ann = asset_annotation(model, assets_root)
     try:
-        box = (yaml.safe_load(ann.read_text()) or {}).get("bounding_box")
+        box = (ann or {})["bounding_box"]
         (x_lo, x_hi), (y_lo, y_hi) = box[0], box[1]
+        return float(x_lo), float(x_hi), float(y_lo), float(y_hi)
     except Exception:
+        return None
+
+
+def asset_footprint(model: str, assets_root: Path) -> float:
+    """Circumscribing radius of a model's footprint around its origin, from its
+    `annotation.yaml`. A circle around the x-y extent is a conservative stand-in for the
+    rectangle where only a radius fits (`blocked_by_static` without a box, the runtime's own
+    resolver); it over-blocks, which is the right direction when the alternative is a
+    pedestrian standing inside a desk."""
+    box = asset_box(model, assets_root)
+    if box is None:
         return DEFAULT_FOOTPRINT
-    return math.hypot(max(abs(float(x_lo)), abs(float(x_hi))), max(abs(float(y_lo)), abs(float(y_hi))))
+    x_lo, x_hi, y_lo, y_hi = box
+    return math.hypot(max(abs(x_lo), abs(x_hi)), max(abs(y_lo), abs(y_hi)))
+
+
+def _yaw(orientation: Mapping[str, object] | None) -> float:
+    """Yaw of a `{w, x, y, z}` quaternion mapping, 0 for anything else."""
+    try:
+        w, x, y, z = (float(orientation[k]) for k in ("w", "x", "y", "z"))
+    except Exception:
+        return 0.0
+    return math.atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
+
+
+def static_polygon(obj: dict[str, Any]) -> list[tuple[float, float]] | None:
+    """The world-frame footprint rectangle of a static with a known box: its `bbox` rotated
+    by `yaw` about the model origin at `pose` - the same four segments the human simulator
+    is given. None without a box (the caller falls back to the radius)."""
+    pose = obj.get("pose")
+    box = obj.get("bbox")
+    if not isinstance(pose, (list, tuple)) or len(pose) < 2 or not box or len(box) != 4:
+        return None
+    x_lo, x_hi, y_lo, y_hi = (float(v) for v in box)
+    px, py = float(pose[0]), float(pose[1])
+    c, s = math.cos(float(obj.get("yaw") or 0.0)), math.sin(float(obj.get("yaw") or 0.0))
+    return [(px + c * lx - s * ly, py + s * lx + c * ly) for lx, ly in ((x_lo, y_lo), (x_lo, y_hi), (x_hi, y_hi), (x_hi, y_lo))]
+
+
+def _distance_to_polygon(x: float, y: float, poly: list[tuple[float, float]]) -> float:
+    """0 inside, else the distance to the nearest edge."""
+    inside = False
+    n = len(poly)
+    for i in range(n):
+        (x1, y1), (x2, y2) = poly[i], poly[(i + 1) % n]
+        if (y1 > y) != (y2 > y) and x < (x2 - x1) * (y - y1) / ((y2 - y1) or 1e-12) + x1:
+            inside = not inside
+    if inside:
+        return 0.0
+    best = math.inf
+    for i in range(n):
+        (x1, y1), (x2, y2) = poly[i], poly[(i + 1) % n]
+        dx, dy = x2 - x1, y2 - y1
+        t = 0.0 if dx == dy == 0 else max(0.0, min(1.0, ((x - x1) * dx + (y - y1) * dy) / (dx * dx + dy * dy)))
+        best = min(best, math.hypot(x - (x1 + t * dx), y - (y1 + t * dy)))
+    return best
+
+
+def find_assets(world_root: Path) -> Path:
+    """The `_assets/default` tree the world's models live in: the first one found walking up
+    from the world (`src/Arena/_assets/default` for `src/Arena/arena_simulation_setup/worlds/<w>`).
+    Until 2026-08-29 this looked two levels up only - inside `arena_simulation_setup`, where
+    there is none - so no annotation was ever read and every static was a 0.4 m disc."""
+    for parent in (world_root, *world_root.parents):
+        candidate = parent / "_assets" / "default"
+        if candidate.is_dir():
+            return candidate
+    return world_root.parents[1] / "_assets" / "default"
 
 
 def world_statics(world_root: str | Path, assets_root: Path | None = None) -> list[dict[str, Any]]:
@@ -126,7 +214,7 @@ def world_statics(world_root: str | Path, assets_root: Path | None = None) -> li
     is exactly what it did.
     """
     root = Path(world_root)
-    assets = assets_root or (root.parents[1] / "_assets" / "default")
+    assets = assets_root or find_assets(root)
     level = next(iter(sorted(root.glob("*/world.yaml"))), None)
     if level is None:
         return []
@@ -144,12 +232,17 @@ def world_statics(world_root: str | Path, assets_root: Path | None = None) -> li
             if "x" not in pos or "y" not in pos:
                 continue
             model = str(ent.get("model", ""))
-            out.append({
+            box = asset_box(model, assets) if model else None
+            item: dict[str, Any] = {
                 "name": ent.get("name", "?"),
                 "model": model,
                 "pose": [float(pos["x"]), float(pos["y"])],
+                "yaw": _yaw(((ent or {}).get("pose") or {}).get("orientation")),
                 "radius": asset_footprint(model, assets) if model else DEFAULT_FOOTPRINT,
-            })
+            }
+            if box is not None:
+                item["bbox"] = list(box)
+            out.append(item)
     return out
 
 
@@ -163,6 +256,11 @@ def blocked_by_static(x: float, y: float, statics: list[dict[str, Any]], radius:
         pose = obj.get("pose")
         if not isinstance(pose, (list, tuple)) or len(pose) < 2:
             continue  # a zone-reference pose; nothing to measure against
+        poly = static_polygon(obj)
+        if poly is not None:
+            if _distance_to_polygon(x, y, poly) < radius:
+                return True
+            continue
         # `radius` is the asset's own footprint where known; `interaction_radius` covers the
         # scenario-declared objects, which are a different source with a different field.
         keep_out = float(obj.get("radius") or obj.get("interaction_radius") or 0.5)

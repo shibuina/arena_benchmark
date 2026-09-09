@@ -8,7 +8,7 @@ quietly rather than loudly if the loader stops accepting it:
 * **`ref:` on a region**, which resolves a source or sink polygon from a zone name. Implemented
   in `World.zone_converter`, used by zero shipped scenarios and tested nowhere until now.
 
-A malformed `regions:` block cannot degrade silently - `_MODERN_ONLY_KEYS` makes the loader
+A malformed document cannot degrade silently - `_MODERN_ONLY_KEYS` makes the loader
 raise rather than fall back to the legacy path - but a *dropped agent* can, which is what §5.2 of
 `SCENARIO_AUTHORING.md` is about. So these assert on what came back, not merely that it parsed.
 
@@ -46,12 +46,10 @@ def loaded(worlds_root, generated_scenario):
 def generated_scenario(worlds_root):
     """Write the generated document into the world, and take it away again."""
     import yaml
-
     from arena_benchmark.cli import _world_parts
     from arena_benchmark.scenario import (
         MIN_ROUTE_CLEARANCE,
         build,
-        build_regions,
         ref_safe_zones,
         robot_zones,
         route_points,
@@ -69,12 +67,8 @@ def generated_scenario(worlds_root):
         min_route_clearance=MIN_ROUTE_CLEARANCE, robot_zones=robot_zones(robot),
     )
     doc = build(
-        "busy", zones=zones, robot=robot, seed=0,
+        "normal", zones=zones, robot=robot, seed=0,
         homes=ref_safe_zones(verdicts),
-        regions=build_regions(
-            "busy", zones=zones, route=route,
-            resolvable={name: v.admissible for name, v in verdicts.items()},
-        ),
     )
 
     name = "pytest_room_centric"
@@ -148,24 +142,6 @@ def test_every_waypoint_reference_resolves_to_its_own_zone(loaded, generated_sce
             assert isinstance(zone, str), f"{agent.name} carries a coordinate waypoint"
             assert _inside((waypoint.x, waypoint.y), polygons[zone]), f"{agent.name}: {zone} resolved outside"
 
-
-def test_a_region_ref_resolves_to_that_zones_polygon(loaded, generated_scenario, worlds_root):
-    import yaml
-
-    written = yaml.safe_load((worlds_root / WORLD / "scenarios" / generated_scenario / "scenario.yaml").read_text())
-    if not written.get("regions"):
-        pytest.skip("this world affords no source/sink pair")
-
-    world = WorldIdentifier(WORLD).resolve_sync().load()
-    polygons = {z.name: [(c.x, c.y) for c in z.corners] for level in world.levels.values() for z in level.zones}
-    assert set(loaded.regions) == set(written["regions"])
-    for name, region in loaded.regions.items():
-        expected = polygons[written["regions"][name]["ref"]]
-        assert len(region.polygon) == len(expected)
-        assert region.type == written["regions"][name]["type"]
-        # `region_hook` pops `ref` and substitutes the polygon; a config that lost its keys on
-        # the way through would leave every Level B knob with nothing to perturb.
-        assert set(region.config) == set(written["regions"][name]["config"])
 
 
 def _inside(pt, poly):

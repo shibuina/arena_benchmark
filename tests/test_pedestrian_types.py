@@ -33,7 +33,7 @@ FAR = {"start": [30.0, 30.0, 0.0], "goal": [31.0, 30.0, 0.0]}
 HUMANSIM_TYPES = Path(__file__).resolve().parents[2] / "humansim" / "arena_humansim" / "config" / "agent_types"
 
 
-def _walkers(zones: list, profile: str = "busy", seed: int = 0, robot: dict = ROBOT) -> list:
+def _walkers(zones: list, profile: str = "normal", seed: int = 0, robot: dict = ROBOT) -> list:
     doc = build(profile, zones=zones, robot=robot, seed=seed, world="w")
     return [a for a in doc["dynamic"] if not a["agent"]["agent_type"].startswith("./")]
 
@@ -61,8 +61,6 @@ def test_world_kind_reads_the_vocabulary():
 
 def test_specialised_types_stay_in_their_buildings():
     assert "child" in mix_for("break", "residential") and "child" not in mix_for("break", "office")
-    assert "wheelchair" in mix_for("normal", "hospital") and "wheelchair" not in mix_for("normal", "office")
-    assert "cart" in mix_for("night", "hospital") and "cart" not in mix_for("night", "residential")
     for t, kinds in ONLY_IN.items():
         for profile in MIX:
             for kind in ("hospital", "residential", "office"):
@@ -70,11 +68,11 @@ def test_specialised_types_stay_in_their_buildings():
                     assert t not in mix_for(profile, kind), (t, profile, kind)
 
 
-def test_a_hospital_population_has_wheelchairs_and_carts_and_no_children():
-    # 5 % each, so this looks at a lot of draws rather than trusting one crowd.
-    kinds = {a["agent"]["agent_type"] for s in range(30) for p in ("busy", "normal", "night") for a in _walkers(HOSPITAL, p, seed=s)}
-    assert {"cart", "wheelchair"} <= kinds
+def test_a_hospital_population_has_no_children_and_no_phantom_types():
+    # Wheelchairs and carts were dropped 2026-08-31: Arena cannot embody them.
+    kinds = {a["agent"]["agent_type"] for s in range(30) for p in ("normal", "night") for a in _walkers(HOSPITAL, p, seed=s)}
     assert "child" not in kinds
+    assert not kinds & {"cart", "wheelchair"}
     assert kinds <= set(KINEMATICS)
 
 
@@ -85,19 +83,19 @@ def test_a_flat_has_children_and_no_gurneys():
 
 
 def test_an_office_has_neither():
-    kinds = {a["agent"]["agent_type"] for s in range(8) for a in _walkers(OFFICE, "busy", seed=s)}
+    kinds = {a["agent"]["agent_type"] for s in range(8) for a in _walkers(OFFICE, "normal", seed=s)}
     assert not kinds & {"cart", "wheelchair", "child"}
     assert len(kinds) >= 3, "an office crowd should still be mixed"
 
 
 def test_speeds_come_from_the_types_own_range():
-    for profile in ("normal", "busy", "night"):
+    for profile in ("normal", "night"):
         for a in _walkers(HOSPITAL, profile, seed=2):
             _, _, lo, hi = KINEMATICS[a["agent"]["agent_type"]]
             assert lo <= a["agent"]["desired_velocity"] <= hi, a
 
 
-def test_night_is_slower_than_busy_for_the_same_type():
+def test_night_is_slower_than_normal_for_the_same_type():
     # Same draw, different profile scale: the only thing that may differ is the scale.
     for kind in KINEMATICS:
         assert speed_for(kind, random.Random(7), 0.8) <= speed_for(kind, random.Random(7), 1.0)
@@ -105,14 +103,16 @@ def test_night_is_slower_than_busy_for_the_same_type():
 
 
 def test_no_radius_is_written_the_type_decides():
-    for a in _walkers(HOSPITAL, "busy", seed=1):
+    for a in _walkers(HOSPITAL, "normal", seed=1):
         assert "radius" not in a["agent"] and "agent_radius" not in a["agent"]
 
 
 def test_talkers_are_untouched_by_the_mix():
-    doc = build("busy", zones=HOSPITAL, robot=ROBOT, seed=1, world="w")
+    from arena_benchmark.scenario.populate import cast_split
+
+    doc = build("normal", zones=HOSPITAL, robot=ROBOT, seed=1, world="w")
     talkers = [a for a in doc["dynamic"] if a["agent"]["agent_type"].startswith("./")]
-    assert len(talkers) == TALKERS
+    assert len(talkers) == cast_split(len(doc["dynamic"]))[0] and len(talkers) % TALKERS == 0 and talkers
 
 
 def test_speed_for_clips_to_the_type():
@@ -124,4 +124,11 @@ def test_speed_for_clips_to_the_type():
 
 
 def test_generation_is_still_byte_identical():
-    assert build("busy", zones=HOSPITAL, robot=ROBOT, seed=4, world="w") == build("busy", zones=HOSPITAL, robot=ROBOT, seed=4, world="w")
+    assert build("normal", zones=HOSPITAL, robot=ROBOT, seed=4, world="w") == build("normal", zones=HOSPITAL, robot=ROBOT, seed=4, world="w")
+
+
+def test_every_base_has_an_elder_to_select():
+    for s in range(10):
+        for p in ("normal", "break", "night"):
+            kinds = {a["agent"]["agent_type"] for a in _walkers(HOSPITAL, p, seed=s)}
+            assert "elder" in kinds, (p, s)

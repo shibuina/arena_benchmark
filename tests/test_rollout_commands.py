@@ -5,10 +5,17 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from arena_benchmark.rollout.commands import (
-    DIFFERENTIAL, LEGGED, NAV2, OMNIDIRECTIONAL, command, pairs, planner_families, render,
-    robot_families, scenarios,
+    DIFFERENTIAL,
+    LEGGED,
+    NAV2,
+    OMNIDIRECTIONAL,
+    command,
+    pairs,
+    planner_families,
+    render,
+    robot_families,
+    scenarios,
 )
 
 

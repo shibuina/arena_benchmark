@@ -15,8 +15,8 @@ evidence that certifies each entry.
 
 ## Why this is not part of `task_generator`
 
-`edge_case_sweep` drives a **running** node by setting `task.edge_case.*` parameters between
-episodes. The planner does not arrive that way: `robot.mobile:=drl robot.mobile.planner:=…`
+A running node can switch scenarios between episodes (`task.scenario.file` + `reset_episode`).
+The planner does not arrive that way: `robot.mobile:=drl robot.mobile.planner:=…`
 is folded into the robot's launch description when it spawns, so changing arms means a new
 stack. Owning stack lifetimes is what this package adds, and it is deliberately not something
 a package imported by every running simulation should do.
@@ -81,7 +81,7 @@ so grouping by that key first is the difference between booting once per trial a
 few dozen.
 
 `scenario` is in the key even though `task.scenario.file` is a node parameter, because
-changing it mid-session leaks flow regions across resets. That is an operational fact rather
+changing it mid-session leaks a scenario's regions across resets. That is an operational fact rather
 than a schema one, and it belongs where the schedule is decided.
 
 ---
@@ -195,60 +195,84 @@ with `Obstacles.SAFE_DIST` alone — 0.15 m, and by its own docstring a *samplin
 what `is_valid` rejects. The mode now validates at `SAFE_DIST + PEDESTRIAN_BODY_RADIUS`, and
 `zone_screen` mirrors the same number.
 
-**Every populated base also carries a source and a sink.** Not for variety:
-[`_perturb_regions`](https://github.com/shibuina/Arena/blob/feature/edge_case/task_generator/task_generator/tasks/obstacles/edge_case/impl.py) aborts
-a Level B knob when the episode has no regions, so a base without them puts the entire
-crowd/global tail - `flow_rate`, `crowd_density`, `crowd_volume`, `source_speed`,
-`source_radius`, `sink_capacity`, `sink_absorption` - out of reach. Thirty generated bases had
-none. Regions are written as `ref: <zone>`, so the region is the room rather than a rectangle
-that goes stale when the world is edited.
-
-The pair is chosen to **meet the robot**: a stream it never encounters exercises the knobs and
-measures nothing, so the picker ranks candidate pairs by whether the line between them comes
-within 1.5 m of the robot's route. Sources additionally keep 1.5 m from the robot's *start* -
-spawning a body on the robot at t=0 is the failure - while sinks need not, since a sink only
-absorbs. `populate` reports which pair it got and whether it meets the route.
-
-No catalogue case sets a Level B knob yet, so nothing perturbs these regions; what they change
-today is the world the other nine cases run in, which is now continuously replenished rather
-than a fixed cast.
+**Bases carry no sources or sinks** (removed 2026-08-28). They used to, so the knob-era Level B
+tail (`flow_rate`, `crowd_density`, ...) had something to act on; that tail is gone, and a stream of
+anonymous `flow_*` agents is population no case can name, own or score. The cast written in
+`dynamic:` is the whole population. (`regions.py` and the `--no-regions` flag went with it.)
 
 ---
 
-## Variants
+## Bases
 
-The parent workspace's `documents/variant_plan.md` defines the variant plan. Every profile has 2–3 base variants
-and every case has 2–3 variants, and the rule for both is the same: **a variant is a named
-recipe that differs from its siblings on a categorical axis; a seed is not a variant.** Seeds
-replicate inside a `cell_uid`; variants are different cells.
+One base per profile - `normal`, `break`, `night`, `empty` - written by `arena_bench populate
+<world> --write --prune` into `worlds/<world>/scenarios/<profile>/`. (Until 2026-08-28 each
+profile had two or three *variants* on route/flow/cast axes; with sources and sinks gone the
+axes no longer distinguished anything, and the sparse casts had nobody walking, so they were
+retired. `scenario/route.py` keeps the one thing that mattered: the shipped route, made long
+enough for a 30 s episode.)
 
-**Base variants** ([`scenario/variants.py`](arena_benchmark/scenario/variants.py)) sit on
-three axes — ROUTE `fwd`/`rev`, FLOW `cross`/`counter`/`co`/`none`, CAST
-`dispersed`/`clustered`/`stream_led` — and siblings must differ on at least two. `_a` is always
-the base that existed before variants. The table is checked by `check_table`, and by a test.
+A base is `PEOPLE_PER_ZONE` (2) people per zone of the profile's role, times a per-world crowd
+factor, at least four: `TALKER_SHARE` (30 %) of them in behaviour-tree pairs, one pair per room,
+the rest walkers with ≥ 15 m itineraries - and at least two walkers whatever the size. People
+start spread over the screened rooms (when fewer than three rooms of the profile's role pass the
+screen, every other screened non-private room joins) - never in, or bound for, a sanitary room or a
+cupboard (`populate.NOT_FOR_PEOPLE`: a toilet stall's 0.7 m door is sealed in HumanSim's grid). A walker drawn faster than HumanSim's
+1.5 m/s cap gets `max_velocity` written alongside its speed, so a hurried nurse actually hurries.
 
-**Case variants** ([`edgecase/variants.py`](arena_benchmark/edgecase/variants.py)) are deltas
-over a case's block, each tagged with a mechanism siblings may not share: `blocking` is
-`stand`/`crawl`/`doorway`, `approach` is `head_on`/`crossing`/`overtake`, `stampede` is
-`push`/`rush`/`dense` — the three single-knob projections of `catalogue_plan.md`'s own
-definition. Names carry the mechanism: `normal_b__blocking_crawl`.
+## Prompt-driven generation
 
-**No cross product.** A case variant runs on one backdrop, rotated through the profile's base
-variants (`backdrop_for`), unless it pins a cast it needs — `stampede_dense` raises the flow, so
-it runs on `stream_led`. Siblings therefore differ in mechanism *and* backdrop, and every
-backdrop is a shipped base: its control. 11 bases and up to 84 cases per world.
+`new_plan_2.md` (workspace root) is the design. A prompt, a world and a base scenario go in; a
+scenario directory comes out. Package: [`promptgen/`](arena_benchmark/promptgen/__init__.py).
 
-**Every episode lasts at least 30 s.** An episode ends when the robot completes its phases, so
-`robot_for` shuttles the shipped endpoints until the route takes `MIN_EPISODE_S` at
-`ROBOT_SPEED_MPS` — 0.5 m/s, the faster of nav2's controller defaults, so the floor holds under
-the slower one too. Pedestrians get routes of at least 15 m one way where the world allows.
+```
+prompt + world + base
+   -> Step 1  Type A by lexicon          lexicon.yaml, step_a.py   (blackout, evacuation, stampede, busy)
+   -> Step 2  Type D by model            step_d.py, system_d.md    (stubborn, interaction_unbroken, formation_break)
+   -> Step 3  Type B + C by model        step_bc.py, system_bc.md  (tune some pedestrians; one pedestrian vs the robot)
+   -> scenarios/<base>__<prompt_id>/     pipeline.py
+        scenario.yaml   population + derived profiles + `edge_case: {effects: [...]}`
+        types/*.yaml    derived profiles (profiles.py: library + tiers; a model emits tiers, never numbers)
+        record.json     decisions, ownership, failures (schema/placement/applicability/conflict/infeasible), dedup key, provenance
+```
 
-**Time-driven variants wait 10 s.** `DELAY_S` goes on every block that carries a `waypoints:`
-plan, which is the one mechanism the mode can postpone (`scenario_block.DELAYABLE`); a knob
-cannot be rewritten mid-episode, and the mode refuses a `delay` it cannot honour rather than
-ignoring it. Injected encounters are delayed spatially instead: `encounter_at: 0.5` on a 30 s
-route is 15 s in. Ten seconds lets the stream ramp a third of the way and the robot get under
-way, and leaves the perturbation most of the episode.
+* **Prompt sets** are generated from the taxonomy with slots (who, group, place, and time
+  constraints: onsets, gates and durations, `prompts.WHEN_A/WHEN_B/WHEN_D/DUR_C`) and frozen
+  (`prompts/universal.yaml`, `prompts/<world>.yaml`; `arena_bench prompts [world] --write`).
+  Each prompt carries `targets` (the steps it exercises) and `oracle` (the decisions its slots
+  encode); the Type A targets are a round-trip test of the lexicon.
+* **The world** ([`world.py`](arena_benchmark/promptgen/world.py)): zones with roles, the
+  occupancy grid with furniture stamped in, the robot's first leg planned offline down the
+  middle of the corridor, placement rules (clearance, reachability, 1.5 m from the start,
+  1.0 m from the goal, 1.5 m from the route unless the case owns it), formation fitting.
+* **Normal until the onset**: the population walks the base scenario's routes; every case is an
+  effect with a `when`. A crowd-wide or per-agent parameter change is a `retune` (the agents are
+  respawned where they stand on a derived profile) at the onset - blackout and Type B at 10 s,
+  evacuation/stampede at 8 s - never baked into the population. Step D's members are ordinary
+  walkers too: a `rally` brings them to their formation spots at `formation.at` (8 s, or the
+  prompt's gate), a `retune` stops an unbroken group yielding, and a `formation_break` fires
+  against the formation's centre afterwards. `record.json` / the block carry `formation`
+  (`centre`, `radius`, `variant`, `at`) for the success criterion.
+* **The robot's route is pinned**: the written scenario's `robots:` start and goal are the exact
+  points the route was planned on (zone centroids snapped into free space on the furniture-aware
+  grid), not zone names the runtime would resolve to random, walls-only-checked points - so the
+  run drives the route the placements were designed against, and never a goal drawn beside a desk.
+* **Ownership**: an agent belongs to at most one step; Type A's rally names the agents present
+  at Step 1; B tunes only unowned agents; C is placed ≥ 2 m from a D placement (the model is
+  asked again with the reason; in `--oracle` mode C is moved along the route).
+* **Model**: Gemini through [`propose/client.py`](arena_benchmark/propose/client.py) at
+  temperature 0, every answer cached by content hash under `data/promptgen/llm_cache`
+  ([`llm.py`](arena_benchmark/promptgen/llm.py)), so regeneration is byte-identical and free.
+  `--oracle` needs no model.
+
+```bash
+arena_bench prompts --write && arena_bench prompts hospital_1 --write
+arena_bench promptgen hospital_1 --oracle -v                      # dry run, no model (every base: normal, break, night, empty)
+arena_bench promptgen hospital_1 --write                          # model, writes
+colcon build --packages-select arena_simulation_setup --symlink-install                 # then launch
+```
+
+The runtime side is the `edge_case` task mode
+([README](../task_generator/task_generator/tasks/obstacles/edge_case/README.md)).
 
 ---
 
@@ -296,30 +320,25 @@ little there is to do rather than manufacturing work.
 | [`scenario/zones.py`](arena_benchmark/scenario/zones.py) | zone name → role | built |
 | [`scenario/occupancy.py`](arena_benchmark/scenario/occupancy.py) | the furniture the map omits, for the screen | built |
 | [`scenario/zone_screen.py`](arena_benchmark/scenario/zone_screen.py) | which zones may be named rather than numbered | built |
-| [`scenario/populate.py`](arena_benchmark/scenario/populate.py) | the five base scenarios | built |
-| [`scenario/regions.py`](arena_benchmark/scenario/regions.py) | the source/sink pair each base carries, by topology | built |
-| [`scenario/variants.py`](arena_benchmark/scenario/variants.py) | base-variant recipes; the robot's route length | built |
-| [`edgecase/variants.py`](arena_benchmark/edgecase/variants.py) | case-variant recipes, backdrop assignment, delay | built |
+| [`scenario/populate.py`](arena_benchmark/scenario/populate.py) | the four base scenarios (one per profile) | built |
+| [`scenario/route.py`](arena_benchmark/scenario/route.py) | the robot's shipped route, made long enough for a 30 s episode | built |
 | [`scenario/zone_roles.yaml`](arena_benchmark/scenario/zone_roles.yaml) | the reviewed name → role mapping | built |
 | [`propose/zone_roles.py`](arena_benchmark/propose/zone_roles.py) | model classification of the tail | built |
 | [`propose/client.py`](arena_benchmark/propose/client.py) | one call into `task_generator.utils.gpt` | built |
-| [`edgecase/catalogue.py`](arena_benchmark/edgecase/catalogue.py) | the nine cases and their applicability | built |
-| [`edgecase/materialize.py`](arena_benchmark/edgecase/materialize.py) | (base, block) → a case scenario directory | built |
+| [`edgecase/materialize.py`](arena_benchmark/edgecase/materialize.py) | base scenario writer and the generated-marker pruning | built |
+| [`promptgen/`](arena_benchmark/promptgen/__init__.py) | prompt → scenario: lexicon (A), model steps (D, B+C), profiles and tiers, placement, prompt sets | built |
 | [`spec/schema.py`](arena_benchmark/spec/schema.py) | spec validation | built |
 | [`spec/expand.py`](arena_benchmark/spec/expand.py) | spec → manifest | built |
 | [`spec/uid.py`](arena_benchmark/spec/uid.py) | `cell_uid`, `episode_uid` | built |
 | [`orchestrate/shard.py`](arena_benchmark/orchestrate/shard.py) | group by launch cost | built |
-| [`orchestrate/plan.py`](arena_benchmark/orchestrate/plan.py) | shard → sweep plan | built |
 | `orchestrate/launcher.py`, `pool.py`, `resume.py` | run stacks, k at a time, resumably | not built |
 | `record/nav_metrics.py` | time-to-goal, path length, SPL, jerk | not built |
 | `assemble/` | join four streams; bake solved cases into portable scenarios | not built |
 | `analysis/` | saturation guard, arm separation, power | not built |
 | `feedback/` | aborted, inert, and unmodelable cases | not built |
 
-Tests: `tests/` runs without ROS; `tests/ros/` needs a sourced environment and holds the two
-contracts with other packages. [`test_plan_contract`](tests/ros/test_plan_contract.py): every
-generated plan is one [`edge_case_plan`](https://github.com/shibuina/Arena/blob/feature/edge_case/task_generator/task_generator/utils/edge_case_plan.py)
-accepts, labels intact. [`test_room_centric_load`](tests/ros/test_room_centric_load.py): every
+Tests: `tests/` runs without ROS; `tests/ros/` needs a sourced environment and holds the
+contract with the loader. [`test_room_centric_load`](tests/ros/test_room_centric_load.py): every
 form `populate` writes is one `ScenarioView.load` reads back — zone references, waypoint lists
 mixing a name with a triple, and `ref:` on a region, which was implemented, used by zero shipped
 scenarios and covered nowhere. Each of those fails by dropping an agent rather than by raising,
