@@ -217,7 +217,7 @@ the rest walkers with ≥ 15 m itineraries - and at least two walkers whatever t
 start spread over the screened rooms (when fewer than three rooms of the profile's role pass the
 screen, every other screened non-private room joins) - never in, or bound for, a sanitary room or a
 cupboard (`populate.NOT_FOR_PEOPLE`: a toilet stall's 0.7 m door is sealed in HumanSim's grid). A walker drawn faster than HumanSim's
-1.5 m/s cap gets `max_velocity` written alongside its speed, so a hurried nurse actually hurries.
+1.5 m/s default cap is a `hurried` type, whose own 2.4 m/s cap lets it actually hurry.
 
 ## Prompt-driven generation
 

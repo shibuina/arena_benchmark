@@ -102,12 +102,12 @@ def test_night_is_half_and_still_walks():
     assert len(night) - len(_talkers(night)) >= MIN_WALKERS
 
 
-def test_a_fast_walker_gets_its_speed_cap_lifted():
+def test_a_fast_walker_is_hurried_and_carries_no_cap():
     agents = [a for seed in range(6) for p in ("normal", "break", "night") for a in build(p, zones=ZONES, robot=ROBOT, seed=seed, homes=HOMES, world="w")["dynamic"]]
     fast = [a for a in agents if a["agent"]["desired_velocity"] > MAX_VELOCITY_DEFAULT]
     assert fast, "the mix has hurried walkers"
-    assert all(a["agent"]["max_velocity"] > a["agent"]["desired_velocity"] for a in fast)
-    assert all("max_velocity" not in a["agent"] for a in agents if a["agent"]["desired_velocity"] <= MAX_VELOCITY_DEFAULT)
+    assert all(a["agent"]["agent_type"] == "hurried" for a in fast)
+    assert all("max_velocity" not in a["agent"] for a in agents)
 
 
 def test_pedestrians_walk_at_least_the_route_floor_where_the_world_allows():

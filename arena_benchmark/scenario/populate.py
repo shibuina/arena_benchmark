@@ -155,10 +155,9 @@ TARGET_ROLE: dict[str, Role] = {
     "empty": Role.WORK,
 }
 
-#: HumanSim's default `max_velocity` distribution mean (`config/agent_types`), and the headroom a
-#: faster walker gets over its own desired speed.
+#: HumanSim's default `max_velocity` distribution mean (`config/agent_types`). A faster walker is a
+#: `hurried` type, whose own cap (2.4 m/s) covers the speeds drawn here.
 MAX_VELOCITY_DEFAULT = 1.5
-MAX_VELOCITY_HEADROOM = 0.3
 
 #: Meshes in shipped use. Shuffled per world so populations are not all led by the same mesh -
 #: an unresolved model logs a warning and silently falls back to a default.
@@ -431,10 +430,6 @@ def build(
             waypoints = [home, *legs] if legs else [home, home]
 
         agent: dict[str, Any] = {"agent_type": kind, "desired_velocity": speed}
-        if speed > MAX_VELOCITY_DEFAULT:
-            # The engine clamps every step to the type's `max_velocity` (1.5 +- 0.1 by default),
-            # so a hurried 1.9 m/s would walk at 1.5; lift the cap with the speed.
-            agent["max_velocity"] = round(speed + MAX_VELOCITY_HEADROOM, 2)
         agents.append({
             "name": f"{profile}_{i + 1}",
             "model": models[i % len(models)],
